@@ -1,0 +1,110 @@
+{% extends "admin_dashboard/base.html" %}
+
+{% block admin_title %}Dashboard Admin{% endblock %}
+{% block admin_heading %}Dashboard{% endblock %}
+
+{% block admin_content %}
+<div class="admin-page-head">
+  <div>
+    <span class="admin-eyebrow">Overview</span>
+    <h1>Selamat datang, {{ request.user.public_name }}.</h1>
+    <p>Pantau konten, pengguna, karya NFT, dan aktivitas marketplace dari satu tempat.</p>
+  </div>
+  <a class="admin-btn admin-btn-primary" href="{% url 'admin_dashboard:post_create' %}">＋ Tulis Artikel</a>
+</div>
+
+<div class="admin-stats-grid">
+  <article class="admin-stat-card accent-coral">
+    <span>Artikel</span>
+    <strong>{{ stats.posts }}</strong>
+    <small>{{ stats.published_posts }} tayang · {{ stats.draft_posts }} draft</small>
+  </article>
+  <article class="admin-stat-card accent-sage">
+    <span>Pengguna</span>
+    <strong>{{ stats.users }}</strong>
+    <small>{{ stats.active_users }} akun aktif</small>
+  </article>
+  <article class="admin-stat-card accent-gold">
+    <span>NFT</span>
+    <strong>{{ stats.nfts }}</strong>
+    <small>{{ stats.listed_nfts }} listed · {{ stats.sold_nfts }} sold</small>
+  </article>
+  <article class="admin-stat-card accent-ink">
+    <span>Total Bid</span>
+    <strong>{{ stats.bids }}</strong>
+    <small>Rp{{ stats.bid_value|floatformat:0 }}</small>
+  </article>
+</div>
+
+<div class="admin-dashboard-grid">
+  <section class="admin-panel admin-panel-wide">
+    <div class="admin-panel-head">
+      <div><span>Content</span><h2>Artikel terbaru</h2></div>
+      <a href="{% url 'admin_dashboard:post_list' %}">Kelola semua →</a>
+    </div>
+    <div class="admin-list-stack">
+      {% for post in recent_posts %}
+      <article class="admin-list-item">
+        <span class="admin-item-icon">✦</span>
+        <div class="admin-item-copy">
+          <strong>{{ post.title }}</strong>
+          <small>Diperbarui {{ post.updated_at|date:"d M Y, H:i" }}</small>
+        </div>
+        <span class="admin-badge {% if post.is_published %}success{% else %}muted{% endif %}">
+          {% if post.is_published %}Published{% else %}Draft{% endif %}
+        </span>
+        <a class="admin-icon-btn" href="{% url 'admin_dashboard:post_edit' post.pk %}" aria-label="Edit {{ post.title }}">Edit</a>
+      </article>
+      {% empty %}
+      <div class="admin-empty">Belum ada artikel. Mulai tulis artikel pertama BatikCraft.</div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="admin-panel">
+    <div class="admin-panel-head">
+      <div><span>Quick Actions</span><h2>Akses cepat</h2></div>
+    </div>
+    <div class="admin-quick-grid">
+      <a href="{% url 'admin_dashboard:post_create' %}"><span>＋</span><strong>Artikel baru</strong><small>Tulis dan publikasikan jurnal</small></a>
+      <a href="{% url 'admin_dashboard:nft_list' %}"><span>◇</span><strong>Moderasi NFT</strong><small>Ubah status dan detail listing</small></a>
+      <a href="{% url 'admin_dashboard:user_list' %}"><span>◎</span><strong>Kelola user</strong><small>Role, akses, dan status akun</small></a>
+      <a href="{% url 'admin_dashboard:bid_list' %}"><span>↗</span><strong>Audit bid</strong><small>Tinjau transaksi bidding</small></a>
+    </div>
+  </section>
+</div>
+
+<div class="admin-dashboard-grid lower-grid">
+  <section class="admin-panel">
+    <div class="admin-panel-head">
+      <div><span>Marketplace</span><h2>NFT terbaru</h2></div>
+      <a href="{% url 'admin_dashboard:nft_list' %}">Lihat semua →</a>
+    </div>
+    <div class="admin-mini-table">
+      {% for nft in recent_nfts %}
+      <a href="{% url 'admin_dashboard:nft_edit' nft.pk %}">
+        <span class="admin-thumb">{% if nft.display_image %}<img src="{{ nft.display_image }}" alt="">{% else %}◇{% endif %}</span>
+        <span><strong>{{ nft.title }}</strong><small>{{ nft.owner.public_name }}</small></span>
+        <span class="admin-badge muted">{{ nft.get_status_display }}</span>
+      </a>
+      {% empty %}<div class="admin-empty">Belum ada NFT.</div>{% endfor %}
+    </div>
+  </section>
+
+  <section class="admin-panel">
+    <div class="admin-panel-head">
+      <div><span>Activity</span><h2>Bid terbaru</h2></div>
+      <a href="{% url 'admin_dashboard:bid_list' %}">Lihat semua →</a>
+    </div>
+    <div class="admin-mini-table">
+      {% for bid in recent_bids %}
+      <a href="{% url 'admin_dashboard:nft_edit' bid.nft.pk %}">
+        <span class="admin-item-icon">↗</span>
+        <span><strong>{{ bid.bidder.public_name }}</strong><small>{{ bid.nft.title }}</small></span>
+        <strong>Rp{{ bid.amount|floatformat:0 }}</strong>
+      </a>
+      {% empty %}<div class="admin-empty">Belum ada aktivitas bid.</div>{% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

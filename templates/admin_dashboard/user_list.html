@@ -1,0 +1,26 @@
+{% extends "admin_dashboard/base.html" %}
+
+{% block admin_title %}Pengguna{% endblock %}
+{% block admin_heading %}Pengguna{% endblock %}
+
+{% block admin_content %}
+<div class="admin-page-head compact">
+  <div><span class="admin-eyebrow">People</span><h1>Kelola Pengguna</h1><p>Atur role, akses staf, profil, dan status akun BatikCraft.</p></div>
+</div>
+<form class="admin-filter-bar" method="get">
+  <label class="admin-search"><span>⌕</span><input type="search" name="q" value="{{ query }}" placeholder="Cari username, nama, atau email..."></label>
+  <select name="role"><option value="">Semua role</option>{% for value,label in roles %}<option value="{{ value }}" {% if role == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  <select name="active"><option value="">Semua status</option><option value="yes" {% if active == 'yes' %}selected{% endif %}>Aktif</option><option value="no" {% if active == 'no' %}selected{% endif %}>Nonaktif</option></select>
+  <button class="admin-btn admin-btn-secondary" type="submit">Filter</button>
+</form>
+<section class="admin-table-card"><div class="admin-table-scroll"><table class="admin-table">
+<thead><tr><th>Pengguna</th><th>Role</th><th>Akses</th><th>Bergabung</th><th class="align-right">Aksi</th></tr></thead>
+<tbody>{% for item in page_obj %}<tr>
+<td><div class="admin-content-cell"><span class="admin-user-avatar">{{ item.public_name|slice:":1"|upper }}</span><span><strong>{{ item.public_name }}</strong><small>@{{ item.username }} · {{ item.email|default:"tanpa email" }}</small></span></div></td>
+<td><span class="admin-badge muted">{{ item.get_role_display }}</span></td>
+<td><span class="admin-badge {% if item.is_active %}success{% else %}danger{% endif %}">{% if item.is_active %}Aktif{% else %}Nonaktif{% endif %}</span>{% if item.is_staff %} <span class="admin-badge gold">Staff</span>{% endif %}</td>
+<td>{{ item.date_joined|date:"d M Y" }}</td>
+<td><div class="admin-row-actions"><a href="{% url 'admin_dashboard:user_edit' item.pk %}">Edit</a><form method="post" action="{% url 'admin_dashboard:user_toggle_active' item.pk %}">{% csrf_token %}<button type="submit" {% if item.pk == request.user.pk %}disabled title="Akun aktif tidak dapat dinonaktifkan"{% endif %}>{% if item.is_active %}Nonaktifkan{% else %}Aktifkan{% endif %}</button></form></div></td>
+</tr>{% empty %}<tr><td colspan="5"><div class="admin-empty tall">Tidak ada pengguna yang cocok.</div></td></tr>{% endfor %}</tbody>
+</table></div>{% include "admin_dashboard/pagination.html" %}</section>
+{% endblock %}

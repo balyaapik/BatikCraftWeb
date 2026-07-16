@@ -1,6 +1,6 @@
 # BatikCraftWeb
 
-Website Django untuk ekosistem BatikCraft: landing page, blog, creator dashboard, buyer dashboard, NFT marketplace, bidding, dan REST API yang dapat dipakai oleh BatikCraft Studio.
+Website Django untuk ekosistem BatikCraft: landing page, blog, creator dashboard, buyer dashboard, NFT marketplace, bidding, REST API BatikCraft Studio, dan dashboard administrator.
 
 ## Fitur
 
@@ -8,10 +8,12 @@ Website Django untuk ekosistem BatikCraft: landing page, blog, creator dashboard
 - Registrasi dan login multi-role: **Creator/User** atau **Buyer**.
 - Creator dashboard untuk profil, draft NFT, publish ke market, harga, metadata, dan statistik bidding.
 - Buyer dashboard untuk live auction dan riwayat bidding.
+- Dashboard admin khusus untuk statistik, blog/post, pengguna, NFT, dan audit bidding.
+- Editor artikel dengan draft, publish/unpublish, slug otomatis, cover URL, dan waktu publikasi.
 - REST API dengan token authentication untuk upload NFT dari aplikasi Studio.
 - Upload melalui file multipart atau URL gambar.
 - Bidding transaksional dengan validasi harga berjalan dan waktu auction.
-- Blog/Jurnal yang dikelola melalui Django Admin.
+- Django Admin teknis tetap tersedia untuk pengelolaan tingkat lanjut.
 - Data demo, Docker, WhiteNoise, dan GitHub Actions.
 
 ## Menjalankan lokal
@@ -31,8 +33,11 @@ Buka `http://127.0.0.1:8000/`.
 
 Akun demo:
 
+- Admin: `admin_demo` / `BatikCraft123!`
 - Creator: `creator_demo` / `BatikCraft123!`
 - Buyer: `buyer_demo` / `BatikCraft123!`
+
+Dashboard admin tersedia di `http://127.0.0.1:8000/dashboard/admin/`. Akun dengan `is_staff=True` atau `is_superuser=True` otomatis diarahkan ke dashboard admin setelah login.
 
 ## API Studio
 

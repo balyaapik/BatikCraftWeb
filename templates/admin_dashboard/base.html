@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% block admin_title %}Admin{% endblock %} — BatikCraft{% endblock %}
+{% block body_class %}admin-dashboard-body{% endblock %}
+{% block site_header %}{% endblock %}
+{% block site_footer %}{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/admin-dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <a class="admin-brand" href="{% url 'admin_dashboard:home' %}">
+      <span class="admin-brand-mark">BC</span>
+      <span><strong>BatikCraft</strong><small>Administration</small></span>
+    </a>
+
+    <nav class="admin-menu" aria-label="Navigasi administrator">
+      <span class="admin-menu-label">Overview</span>
+      <a class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'admin_dashboard:home' %}"><span>⌂</span> Dashboard</a>
+      <span class="admin-menu-label">Content</span>
+      <a class="{% if 'post' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'admin_dashboard:post_list' %}"><span>✦</span> Blog &amp; Post</a>
+      <span class="admin-menu-label">Marketplace</span>
+      <a class="{% if 'nft' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'admin_dashboard:nft_list' %}"><span>◇</span> NFT</a>
+      <a class="{% if 'bid' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'admin_dashboard:bid_list' %}"><span>↗</span> Bidding</a>
+      <span class="admin-menu-label">People</span>
+      <a class="{% if 'user' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'admin_dashboard:user_list' %}"><span>◎</span> Pengguna</a>
+    </nav>
+
+    <div class="admin-sidebar-foot">
+      <a href="{% url 'home' %}" target="_blank" rel="noopener">Lihat website ↗</a>
+      <a href="/admin/">Django Admin</a>
+      <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Logout</button></form>
+    </div>
+  </aside>
+
+  <section class="admin-main">
+    <header class="admin-topbar">
+      <button class="admin-mobile-toggle" type="button" aria-label="Buka menu" onclick="document.body.classList.toggle('admin-nav-open')">☰</button>
+      <div><span class="admin-kicker">BatikCraft Control Center</span><strong>{% block admin_heading %}Dashboard{% endblock %}</strong></div>
+      <div class="admin-account"><span class="admin-avatar">{{ request.user.public_name|slice:":1"|upper }}</span><span><strong>{{ request.user.public_name }}</strong><small>Administrator</small></span></div>
+    </header>
+    <div class="admin-content">{% block admin_content %}{% endblock %}</div>
+  </section>
+</div>
+{% endblock %}

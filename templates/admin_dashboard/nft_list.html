@@ -1,0 +1,26 @@
+{% extends "admin_dashboard/base.html" %}
+
+{% block admin_title %}NFT Market{% endblock %}
+{% block admin_heading %}NFT Market{% endblock %}
+
+{% block admin_content %}
+<div class="admin-page-head compact">
+  <div><span class="admin-eyebrow">Marketplace</span><h1>Kelola NFT</h1><p>Moderasi karya, ubah status listing, harga, owner, metadata, dan jadwal auction.</p></div>
+</div>
+<form class="admin-filter-bar" method="get">
+  <label class="admin-search"><span>⌕</span><input type="search" name="q" value="{{ query }}" placeholder="Cari NFT, owner, project ID, token..."></label>
+  <select name="status" onchange="this.form.submit()"><option value="">Semua status</option>{% for value,label in statuses %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  <button class="admin-btn admin-btn-secondary" type="submit">Filter</button>
+</form>
+<section class="admin-table-card"><div class="admin-table-scroll"><table class="admin-table">
+<thead><tr><th>Karya</th><th>Owner</th><th>Status</th><th>Harga</th><th>Bid</th><th class="align-right">Aksi</th></tr></thead>
+<tbody>{% for nft in page_obj %}<tr>
+<td><div class="admin-content-cell"><span class="admin-cover-mini">{% if nft.display_image %}<img src="{{ nft.display_image }}" alt="">{% else %}◇{% endif %}</span><span><strong>{{ nft.title }}</strong><small>{{ nft.source_project_id|default:"Tanpa Project ID" }}</small></span></div></td>
+<td>{{ nft.owner.public_name }}<small class="block-muted">@{{ nft.owner.username }}</small></td>
+<td><span class="admin-badge {% if nft.status == 'listed' %}success{% elif nft.status == 'sold' %}gold{% elif nft.status == 'archived' %}danger{% else %}muted{% endif %}">{{ nft.get_status_display }}</span></td>
+<td><strong>Rp{{ nft.current_price|floatformat:0 }}</strong><small class="block-muted">Mulai Rp{{ nft.starting_price|floatformat:0 }}</small></td>
+<td>{{ nft.bid_count }}</td>
+<td><div class="admin-row-actions"><a href="{% url 'nft_detail' nft.pk %}" target="_blank" rel="noopener">Lihat</a><a href="{% url 'admin_dashboard:nft_edit' nft.pk %}">Edit</a><a class="danger" href="{% url 'admin_dashboard:nft_delete' nft.pk %}">Hapus</a></div></td>
+</tr>{% empty %}<tr><td colspan="6"><div class="admin-empty tall">Tidak ada NFT yang cocok.</div></td></tr>{% endfor %}</tbody>
+</table></div>{% include "admin_dashboard/pagination.html" %}</section>
+{% endblock %}

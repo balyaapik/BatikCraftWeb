@@ -9,6 +9,17 @@ class Command(BaseCommand):
     help = "Membuat akun dan konten demo BatikCraft"
 
     def handle(self, *args, **options):
+        admin_user, _ = User.objects.get_or_create(username="admin_demo", defaults={
+            "email": "admin@example.com", "display_name": "BatikCraft Admin", "role": User.Role.CREATOR,
+            "is_staff": True, "is_superuser": True,
+        })
+        admin_user.email = "admin@example.com"
+        admin_user.display_name = "BatikCraft Admin"
+        admin_user.is_staff = True
+        admin_user.is_superuser = True
+        admin_user.set_password("BatikCraft123!")
+        admin_user.save()
+
         creator, _ = User.objects.get_or_create(username="creator_demo", defaults={
             "email": "creator@example.com", "display_name": "Sanggar Arunika", "role": User.Role.CREATOR
         })
@@ -45,5 +56,6 @@ class Command(BaseCommand):
             "published_at": timezone.now(),
         })
         self.stdout.write(self.style.SUCCESS("Data demo berhasil dibuat."))
+        self.stdout.write("Admin: admin_demo / BatikCraft123!")
         self.stdout.write("Creator: creator_demo / BatikCraft123!")
         self.stdout.write("Buyer: buyer_demo / BatikCraft123!")

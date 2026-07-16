@@ -10,8 +10,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
+  {% block site_header %}
   <header class="site-header">
     <a class="brand" href="{% url 'home' %}"><span class="brand-mark">BC</span><span>BatikCraft</span></a>
     <button class="nav-toggle" aria-label="Buka navigasi" onclick="document.body.classList.toggle('nav-open')">☰</button>
@@ -32,13 +34,16 @@
       {% endif %}
     </div>
   </header>
+  {% endblock %}
   {% if messages %}<div class="messages">{% for message in messages %}<div class="message {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
   <main>{% block content %}{% endblock %}</main>
+  {% block site_footer %}
   <footer class="site-footer">
     <div><a class="brand" href="{% url 'home' %}"><span class="brand-mark">BC</span><span>BatikCraft</span></a><p>Crafting heritage into the digital future.</p></div>
     <div><strong>Explore</strong><a href="{% url 'market' %}">NFT Market</a><a href="{% url 'blog_list' %}">Journal</a><a href="{% url 'download' %}">Studio</a></div>
-    <div><strong>Platform</strong><a href="{% url 'app_page' %}">Tentang App</a><a href="/api/v1/">REST API</a><a href="/admin/">Admin</a></div>
+    <div><strong>Platform</strong><a href="{% url 'app_page' %}">Tentang App</a><a href="/api/v1/">REST API</a><a href="{% url 'dashboard_router' %}">Dashboard</a></div>
     <div><strong>Contact</strong><span>hello@batikcraft.id</span><span>Yogyakarta, Indonesia</span></div>
   </footer>
+  {% endblock %}
 </body>
 </html>

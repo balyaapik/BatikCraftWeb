@@ -1,0 +1,24 @@
+{% extends "admin_dashboard/base.html" %}
+
+{% block admin_title %}Bidding{% endblock %}
+{% block admin_heading %}Bidding{% endblock %}
+
+{% block admin_content %}
+<div class="admin-page-head compact">
+  <div><span class="admin-eyebrow">Marketplace Activity</span><h1>Audit Bidding</h1><p>Tinjau seluruh aktivitas bid berdasarkan koleksi dan buyer.</p></div>
+</div>
+<form class="admin-filter-bar" method="get">
+  <label class="admin-search"><span>⌕</span><input type="search" name="q" value="{{ query }}" placeholder="Cari NFT atau bidder..."></label>
+  <button class="admin-btn admin-btn-secondary" type="submit">Cari</button>
+</form>
+<section class="admin-table-card"><div class="admin-table-scroll"><table class="admin-table">
+<thead><tr><th>NFT</th><th>Bidder</th><th>Nominal</th><th>Waktu</th><th class="align-right">Aksi</th></tr></thead>
+<tbody>{% for bid in page_obj %}<tr>
+<td><strong>{{ bid.nft.title }}</strong><small class="block-muted">Owner: {{ bid.nft.owner.public_name }}</small></td>
+<td>{{ bid.bidder.public_name }}<small class="block-muted">@{{ bid.bidder.username }}</small></td>
+<td><strong>Rp{{ bid.amount|floatformat:0 }}</strong></td>
+<td>{{ bid.created_at|date:"d M Y, H:i" }}</td>
+<td><div class="admin-row-actions"><a href="{% url 'nft_detail' bid.nft.pk %}" target="_blank" rel="noopener">Lihat NFT</a><a class="danger" href="{% url 'admin_dashboard:bid_delete' bid.pk %}">Hapus</a></div></td>
+</tr>{% empty %}<tr><td colspan="5"><div class="admin-empty tall">Belum ada aktivitas bid.</div></td></tr>{% endfor %}</tbody>
+</table></div>{% include "admin_dashboard/pagination.html" %}</section>
+{% endblock %}
