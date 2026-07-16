@@ -1,0 +1,20 @@
+{% extends "admin_dashboard/base.html" %}
+
+{% block admin_title %}Konfirmasi Hapus{% endblock %}
+{% block admin_heading %}Konfirmasi{% endblock %}
+
+{% block admin_content %}
+<div class="admin-confirm-wrap">
+  <section class="admin-confirm-card">
+    <span class="admin-danger-icon">!</span>
+    <span class="admin-eyebrow">Tindakan permanen</span>
+    <h1>Hapus {{ object_type }}?</h1>
+    <p><strong>{{ object }}</strong> akan dihapus permanen dan tidak dapat dipulihkan.</p>
+    <form method="post">
+      {% csrf_token %}
+      <a class="admin-btn admin-btn-secondary" href="{% url cancel_url %}">Batal</a>
+      <button class="admin-btn admin-btn-danger" type="submit">Ya, hapus</button>
+    </form>
+  </section>
+</div>
+{% endblock %}
