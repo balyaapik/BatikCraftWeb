@@ -16,5 +16,15 @@ jobs:
           cache: pip
       - run: pip install -q -r requirements-dev.txt
       - run: python manage.py check
-      - run: python manage.py test --verbosity 2
+      - name: Run tests
+        id: tests
+        continue-on-error: true
+        run: python manage.py test --verbosity 2 > test-output.txt 2>&1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: django-test-output
+          path: test-output.txt
       - run: ruff check .
+      - name: Enforce test result
+        if: steps.tests.outcome == 'failure'
+        run: cat test-output.txt && exit 1
