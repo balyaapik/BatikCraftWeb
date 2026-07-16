@@ -1,0 +1,59 @@
+{% extends "admin_dashboard/base.html" %}
+
+{% block admin_title %}Blog & Post{% endblock %}
+{% block admin_heading %}Blog & Post{% endblock %}
+
+{% block admin_content %}
+<div class="admin-page-head compact">
+  <div>
+    <span class="admin-eyebrow">Content Management</span>
+    <h1>Blog &amp; Post</h1>
+    <p>Tulis, edit, publikasikan, atau simpan artikel sebagai draft.</p>
+  </div>
+  <a class="admin-btn admin-btn-primary" href="{% url 'admin_dashboard:post_create' %}">＋ Artikel Baru</a>
+</div>
+
+<form class="admin-filter-bar" method="get">
+  <label class="admin-search"><span>⌕</span><input type="search" name="q" value="{{ query }}" placeholder="Cari judul atau isi artikel..."></label>
+  <select name="status" onchange="this.form.submit()">
+    <option value="">Semua status</option>
+    <option value="published" {% if status == 'published' %}selected{% endif %}>Published</option>
+    <option value="draft" {% if status == 'draft' %}selected{% endif %}>Draft</option>
+  </select>
+  <button class="admin-btn admin-btn-secondary" type="submit">Filter</button>
+</form>
+
+<section class="admin-table-card">
+  <div class="admin-table-scroll">
+    <table class="admin-table">
+      <thead><tr><th>Artikel</th><th>Status</th><th>Publikasi</th><th>Diperbarui</th><th class="align-right">Aksi</th></tr></thead>
+      <tbody>
+      {% for post in page_obj %}
+        <tr>
+          <td>
+            <div class="admin-content-cell">
+              <span class="admin-cover-mini">{% if post.cover_url %}<img src="{{ post.cover_url }}" alt="">{% else %}✦{% endif %}</span>
+              <span><strong>{{ post.title }}</strong><small>/blog/{{ post.slug }}/</small></span>
+            </div>
+          </td>
+          <td><span class="admin-badge {% if post.is_published %}success{% else %}muted{% endif %}">{% if post.is_published %}Published{% else %}Draft{% endif %}</span></td>
+          <td>{% if post.published_at %}{{ post.published_at|date:"d M Y, H:i" }}{% else %}<span class="text-muted">Belum tayang</span>{% endif %}</td>
+          <td>{{ post.updated_at|date:"d M Y, H:i" }}</td>
+          <td>
+            <div class="admin-row-actions">
+              {% if post.is_published %}<a href="{{ post.get_absolute_url }}" target="_blank" rel="noopener">Lihat</a>{% endif %}
+              <a href="{% url 'admin_dashboard:post_edit' post.pk %}">Edit</a>
+              <form method="post" action="{% url 'admin_dashboard:post_toggle_publish' post.pk %}">{% csrf_token %}<button type="submit">{% if post.is_published %}Unpublish{% else %}Publish{% endif %}</button></form>
+              <a class="danger" href="{% url 'admin_dashboard:post_delete' post.pk %}">Hapus</a>
+            </div>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5"><div class="admin-empty tall">Tidak ada artikel yang cocok dengan pencarian.</div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "admin_dashboard/pagination.html" %}
+</section>
+{% endblock %}
