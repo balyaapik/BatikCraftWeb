@@ -63,6 +63,8 @@ def register(request):
 
 @login_required
 def dashboard_router(request):
+    if request.user.is_staff or request.user.is_superuser:
+        return redirect("admin_dashboard:home")
     if request.user.role == User.Role.BUYER:
         return redirect("buyer_dashboard")
     return redirect("creator_dashboard")
