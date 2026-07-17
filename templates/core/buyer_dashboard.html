@@ -1,1 +1,75 @@
-{% extends 'base.html' %}{% block title %}Buyer Dashboard — BatikCraft{% endblock %}{% block content %}<section class="dashboard-shell section-pad"><aside class="dash-nav"><span class="eyebrow">Collector Workspace</span><h2>{{ user.public_name }}</h2><a class="active" href="{% url 'buyer_dashboard' %}">Overview</a><a href="{% url 'market' %}">Market</a><a href="{% url 'profile_edit' %}">Profil</a></aside><div class="dash-main"><div class="dashboard-head"><div><span class="eyebrow">Buyer Dashboard</span><h1>Collect meaningful craft.</h1></div><a class="btn btn-primary" href="{% url 'market' %}">Explore market</a></div><h2>Live auctions</h2><div class="nft-grid compact-grid">{% for nft in market_items %}{% include 'core/partials/nft_card.html' %}{% empty %}<div class="empty-state">Belum ada auction aktif.</div>{% endfor %}</div><div class="table-card"><div class="table-head"><h2>Bid terbaru Anda</h2></div><div class="responsive-table"><table><thead><tr><th>Karya</th><th>Creator</th><th>Nominal</th><th>Waktu</th></tr></thead><tbody>{% for bid in own_bids %}<tr><td><a href="{% url 'nft_detail' bid.nft.pk %}">{{ bid.nft.title }}</a></td><td>{{ bid.nft.owner.public_name }}</td><td><strong>Rp{{ bid.amount|floatformat:0 }}</strong></td><td>{{ bid.created_at|date:'d M Y, H:i' }}</td></tr>{% empty %}<tr><td colspan="4">Anda belum melakukan bidding.</td></tr>{% endfor %}</tbody></table></div></div></div></section>{% endblock %}
+{% extends 'base.html' %}
+{% block title %}Buyer Dashboard — BatikCraft{% endblock %}
+{% block content %}
+<section class="dashboard-shell section-pad">
+  <aside class="dash-nav">
+    <span class="eyebrow">Collector Workspace</span>
+    <h2>{{ user.public_name }}</h2>
+    <a class="active" href="{% url 'buyer_dashboard' %}">Overview</a>
+    <a href="{% url 'market' %}">NFT Market</a>
+    <a href="{% url 'model_market' %}">Model Market</a>
+    <a href="{% url 'profile_edit' %}">Profil</a>
+  </aside>
+  <div class="dash-main">
+    <div class="dashboard-head">
+      <div><span class="eyebrow">Buyer Dashboard</span><h1>Collect meaningful craft.</h1></div>
+      <div>
+        <a class="btn btn-ghost" href="{% url 'model_market' %}">Explore models</a>
+        <a class="btn btn-primary" href="{% url 'market' %}">Explore NFT</a>
+      </div>
+    </div>
+
+    <h2>Live auctions</h2>
+    <div class="nft-grid compact-grid">
+      {% for nft in market_items %}
+        {% include 'core/partials/nft_card.html' %}
+      {% empty %}
+        <div class="empty-state">Belum ada auction aktif.</div>
+      {% endfor %}
+    </div>
+
+    <div class="table-card">
+      <div class="table-head"><h2>Bid terbaru Anda</h2></div>
+      <div class="responsive-table">
+        <table>
+          <thead><tr><th>Karya</th><th>Creator</th><th>Nominal</th><th>Waktu</th></tr></thead>
+          <tbody>
+          {% for bid in own_bids %}
+            <tr>
+              <td><a href="{% url 'nft_detail' bid.nft.pk %}">{{ bid.nft.title }}</a></td>
+              <td>{{ bid.nft.owner.public_name }}</td>
+              <td><strong>Rp{{ bid.amount|floatformat:0 }}</strong></td>
+              <td>{{ bid.created_at|date:'d M Y, H:i' }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="4">Anda belum melakukan bidding.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-head"><h2>Library Model</h2><span>{{ model_library|length }} model</span></div>
+      <div class="responsive-table">
+        <table>
+          <thead><tr><th>Model</th><th>Seller</th><th>Lisensi</th><th>Harga</th><th>Aksi</th></tr></thead>
+          <tbody>
+          {% for purchase in model_library %}
+            <tr>
+              <td><a href="{% url 'model_detail' purchase.model.pk %}">{{ purchase.model.name }}</a><small>{{ purchase.model.version }} · {{ purchase.model.base_model_family }}</small></td>
+              <td>{{ purchase.model.seller.public_name }}</td>
+              <td>{{ purchase.license_snapshot.license_type|default:purchase.model.license_type }}</td>
+              <td>Rp{{ purchase.amount_paid|floatformat:0 }}</td>
+              <td><a href="{% url 'model_download' purchase.model.pk %}">Download</a></td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5">Belum ada model di library.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
