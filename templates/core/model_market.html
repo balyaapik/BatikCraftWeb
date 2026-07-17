@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Model Market — BatikCraft{% endblock %}
+{% block content %}
+<section class="page-hero section-pad">
+  <span class="eyebrow">BatikCraft Model Marketplace</span>
+  <h1>Train once.<br><em>Share the craft.</em></h1>
+  <p>Temukan model LoRA BatikCraft untuk ornamen, pola, flora, fauna, dan wayang.</p>
+  <form class="search-bar">
+    <input type="search" name="q" value="{{ query }}" placeholder="Cari model, kategori, atau seller...">
+    <button class="btn btn-primary">Cari</button>
+  </form>
+</section>
+<section class="section-pad market-section">
+  <div class="section-heading">
+    <h2>Model Tersedia</h2>
+    <span>{{ items|length }} model</span>
+  </div>
+  <div class="nft-grid light-grid">
+    {% for model in items %}
+      <article class="nft-card">
+        <a href="{% url 'model_detail' model.pk %}" class="nft-image">
+          {% if model.display_preview %}
+            <img src="{{ model.display_preview }}" alt="{{ model.name }}">
+          {% else %}
+            <div class="empty-state"><strong>{{ model.base_model_family|upper }}</strong></div>
+          {% endif %}
+        </a>
+        <div class="nft-info">
+          <span class="eyebrow">{{ model.category }} · {{ model.version }}</span>
+          <h3><a href="{% url 'model_detail' model.pk %}">{{ model.name }}</a></h3>
+          <p>{{ model.description|truncatechars:120 }}</p>
+          <div class="nft-meta">
+            <span>{{ model.seller.public_name }}</span>
+            <strong>Rp{{ model.price|floatformat:0 }}</strong>
+          </div>
+        </div>
+      </article>
+    {% empty %}
+      <div class="empty-state">
+        <h3>Belum ada model yang dijual.</h3>
+        <p>Creator dapat mengunggah model dari BatikCraft Studio atau dashboard.</p>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
