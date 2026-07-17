@@ -1,46 +1,27 @@
 {% extends 'base.html' %}
 {% load ui_i18n %}
 {% block title %}{% t "market.model.title" %}{% endblock %}
+{% block body_class %}heritage-model-page{% endblock %}
 {% block content %}
-<section class="page-hero section-pad">
-  <span class="eyebrow"><i class="fa-solid fa-brain" aria-hidden="true"></i> {% t "market.model.eyebrow" %}</span>
+<section class="heritage-page-hero">
+  <span class="heritage-kicker">{% t "market.model.eyebrow" %}</span>
   <h1>{% t "market.model.line1" %}<br><em>{% t "market.model.line2" %}</em></h1>
   <p>{% t "market.model.body" %}</p>
-  <form class="search-bar" method="get">
-    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+  <form class="search-bar" role="search" method="get">
     <input type="search" name="q" value="{{ query }}" placeholder="{% t 'market.model.placeholder' %}">
-    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> {% t "common.search" %}</button>
+    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass"></i> {% t "common.search" %}</button>
   </form>
 </section>
+<div class="ornament-divider" aria-hidden="true"></div>
 <section class="section-pad market-section">
-  <div class="section-heading">
-    <h2>{% t "market.model.available" %}</h2>
-    <span>{{ items|length }} {% t "common.models" %}</span>
-  </div>
+  <div class="section-heading"><div><span class="heritage-kicker">{% if ui_language == 'en' %}Creator-trained tools{% else %}Perangkat hasil training kreator{% endif %}</span><h2>{% t "market.model.available" %}</h2></div><span>{{ items|length }} {% t "common.models" %}</span></div>
   <div class="nft-grid light-grid">
     {% for model in items %}
-      <article class="nft-card">
-        <a href="{% url 'model_detail' model.pk %}" class="nft-image">
-          {% if model.display_preview %}
-            <img src="{{ model.display_preview }}" alt="{{ model.name }}">
-          {% else %}
-            <div class="empty-state"><strong>{{ model.base_model_family|upper }}</strong></div>
-          {% endif %}
-          <span class="status-pill"><i class="fa-solid fa-brain" aria-hidden="true"></i> {{ model.base_model_family|upper }}</span>
-        </a>
-        <div class="nft-info">
-          <span class="eyebrow">{{ model.category }} · {{ model.version }}</span>
-          <h3><a href="{% url 'model_detail' model.pk %}">{{ model.name }}</a></h3>
-          <p>{{ model.description|truncatechars:120 }}</p>
-          <div class="nft-meta">
-            <span>{% t "common.by" %} {{ model.seller.public_name }}</span>
-            <strong>Rp{{ model.price|floatformat:0 }}</strong>
-          </div>
-        </div>
-      </article>
-    {% empty %}
-      <div class="empty-state"><i class="fa-solid fa-brain" aria-hidden="true"></i><h3>{% t "market.model.empty.title" %}</h3><p>{% t "market.model.empty.body" %}</p></div>
-    {% endfor %}
+    <article class="nft-card">
+      <a href="{% url 'model_detail' model.pk %}" class="nft-image">{% if model.display_preview %}<img src="{{ model.display_preview }}" alt="{{ model.name }}">{% else %}<div class="image-placeholder"><i class="fa-solid fa-brain"></i> {{ model.base_model_family|upper }}</div>{% endif %}<span class="status-pill">{{ model.category }}</span></a>
+      <div class="nft-info"><span class="editorial-meta">{{ model.version }} · {{ model.base_model_family|upper }}</span><h3><a href="{% url 'model_detail' model.pk %}">{{ model.name }}</a></h3><p>{{ model.description|truncatechars:115 }}</p><div class="price-row"><span>{{ model.seller.public_name }}</span><strong>Rp{{ model.price|floatformat:0 }}</strong></div><div class="card-meta"><span>{{ model.get_license_type_display }}</span><a href="{% url 'model_detail' model.pk %}">{% if ui_language == 'en' %}View{% else %}Lihat{% endif %} →</a></div></div>
+    </article>
+    {% empty %}<div class="empty-state"><h3>{% t "market.model.empty.title" %}</h3><p>{% t "market.model.empty.body" %}</p></div>{% endfor %}
   </div>
 </section>
 {% endblock %}
