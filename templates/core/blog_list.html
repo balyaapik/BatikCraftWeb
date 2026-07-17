@@ -1,21 +1,23 @@
 {% extends 'base.html' %}
-{% load ui_i18n %}
-{% block title %}{% t "blog.title" %}{% endblock %}
+{% block title %}Blog — BatikCraft{% endblock %}
+{% block body_class %}heritage-blog-page{% endblock %}
 {% block content %}
-<section class="page-hero section-pad">
-  <span class="eyebrow"><i class="fa-solid fa-book-open" aria-hidden="true"></i> {% t "blog.eyebrow" %}</span>
-  <h1>{% t "blog.line1" %}<br><em>{% t "blog.line2" %}</em></h1>
+<section class="heritage-page-hero">
+  <span class="heritage-kicker">BatikCraft Journal</span>
+  <h1>{% if ui_language == 'en' %}Ideas, heritage,<br><em>and digital craft.</em>{% else %}Gagasan, warisan,<br><em>dan karya digital.</em>{% endif %}</h1>
+  <p>{% if ui_language == 'en' %}Long-form stories about batik, creative technology, artist journeys, and the future of cultural ownership.{% else %}Cerita mendalam mengenai batik, teknologi kreatif, perjalanan seniman, dan masa depan kepemilikan budaya.{% endif %}</p>
+  <form class="search-bar" role="search" method="get"><input type="search" name="q" value="{{ query }}" placeholder="{% if ui_language == 'en' %}Search stories and tutorials...{% else %}Cari cerita dan tutorial...{% endif %}"><button class="btn btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass"></i> {% if ui_language == 'en' %}Search{% else %}Cari{% endif %}</button></form>
 </section>
-<section class="section-pad journal-grid">
-  {% for post in posts %}
-    <article class="journal-card large">
-      <span>{{ post.published_at|date:'d M Y' }}</span>
-      <h2><a href="{{ post.get_absolute_url }}">{{ post.title }}</a></h2>
-      <p>{{ post.excerpt }}</p>
-      <a href="{{ post.get_absolute_url }}">{% t "common.read_article" %}</a>
+<div class="ornament-divider" aria-hidden="true"></div>
+<section class="journal-showcase">
+  <div class="heritage-section-head editorial-heading"><div><span class="heritage-kicker">{% if ui_language == 'en' %}Latest writing{% else %}Tulisan terbaru{% endif %}</span><h2>{% if ui_language == 'en' %}Timeless education.{% else %}Edukasi tanpa batas waktu.{% endif %}</h2></div><a class="portal-link" href="{% url 'news' %}">{% if ui_language == 'en' %}Open News{% else %}Buka Berita{% endif %} →</a></div>
+  <div class="journal-showcase-grid">
+    {% for post in posts %}
+    <article class="journal-showcase-card">
+      <a href="{{ post.get_absolute_url }}">{% if post.cover_url %}<img src="{{ post.cover_url }}" alt="{{ post.title }}">{% endif %}</a>
+      <div class="journal-card-copy"><span class="editorial-meta">{{ post.published_at|date:'d M Y'|default:'BatikCraft' }}</span><h2><a href="{{ post.get_absolute_url }}">{{ post.title }}</a></h2><p>{{ post.excerpt|truncatechars:145 }}</p><a class="portal-link" href="{{ post.get_absolute_url }}">{% if ui_language == 'en' %}Read article{% else %}Baca artikel{% endif %} →</a></div>
     </article>
-  {% empty %}
-    <div class="empty-state"><i class="fa-solid fa-book" aria-hidden="true"></i><h3>{% t "blog.empty.title" %}</h3><p>{% t "blog.empty.body" %}</p></div>
-  {% endfor %}
+    {% empty %}<div class="empty-state"><h3>{% if ui_language == 'en' %}No articles yet.{% else %}Belum ada artikel.{% endif %}</h3><p>{% if ui_language == 'en' %}Articles can be published from the admin dashboard.{% else %}Artikel dapat dipublikasikan melalui dashboard admin.{% endif %}</p></div>{% endfor %}
+  </div>
 </section>
 {% endblock %}
