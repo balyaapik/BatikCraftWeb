@@ -20,7 +20,8 @@
     <nav class="main-nav">
       <a href="{% url 'home' %}">Home</a>
       <a href="{% url 'download' %}">Download</a>
-      <a href="{% url 'market' %}">Market</a>
+      <a href="{% url 'market' %}">NFT Market</a>
+      <a href="{% url 'model_market' %}">Model Market</a>
       <a href="{% url 'app_page' %}">App</a>
       <a href="{% url 'blog_list' %}">Blog</a>
     </nav>
@@ -40,7 +41,7 @@
   {% block site_footer %}
   <footer class="site-footer">
     <div><a class="brand" href="{% url 'home' %}"><span class="brand-mark">BC</span><span>BatikCraft</span></a><p>Crafting heritage into the digital future.</p></div>
-    <div><strong>Explore</strong><a href="{% url 'market' %}">NFT Market</a><a href="{% url 'blog_list' %}">Journal</a><a href="{% url 'download' %}">Studio</a></div>
+    <div><strong>Explore</strong><a href="{% url 'market' %}">NFT Market</a><a href="{% url 'model_market' %}">Model Market</a><a href="{% url 'blog_list' %}">Journal</a><a href="{% url 'download' %}">Studio</a></div>
     <div><strong>Platform</strong><a href="{% url 'app_page' %}">Tentang App</a><a href="/api/v1/">REST API</a><a href="{% url 'dashboard_router' %}">Dashboard</a></div>
     <div><strong>Contact</strong><span>hello@batikcraft.id</span><span>Yogyakarta, Indonesia</span></div>
   </footer>
