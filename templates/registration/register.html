@@ -1,1 +1,29 @@
-{% extends 'base.html' %}{% block title %}Register — BatikCraft{% endblock %}{% block content %}<section class="auth-page"><div class="auth-art"><span class="eyebrow">Join BatikCraft</span><h1>Create, collect,<br><em>preserve culture.</em></h1><p>Pilih role Creator untuk mengunggah karya dari Studio atau Buyer untuk mengikuti bidding.</p></div><div class="auth-panel"><form method="post" class="form-card auth-card">{% csrf_token %}<span class="eyebrow">New account</span><h2>Buat akun</h2>{{ form.as_p }}<button class="btn btn-primary btn-block" type="submit">Daftar</button><p class="form-foot">Sudah punya akun? <a href="{% url 'login' %}">Login</a></p></form></div></section>{% endblock %>
+{% extends "base.html" %}
+
+{% block title %}Register — BatikCraft{% endblock %}
+
+{% block content %}
+<section class="auth-page">
+  <div class="auth-art">
+    <span class="eyebrow">Join BatikCraft</span>
+    <h1>Create, collect,<br><em>preserve culture.</em></h1>
+    <p>
+      Pilih role Creator untuk mengunggah karya dari Studio atau Buyer untuk
+      mengikuti bidding.
+    </p>
+  </div>
+
+  <div class="auth-panel">
+    <form method="post" class="form-card auth-card">
+      {% csrf_token %}
+      <span class="eyebrow">New account</span>
+      <h2>Buat akun</h2>
+      {{ form.as_p }}
+      <button class="btn btn-primary btn-block" type="submit">Daftar</button>
+      <p class="form-foot">
+        Sudah punya akun? <a href="{% url 'login' %}">Login</a>
+      </p>
+    </form>
+  </div>
+</section>
+{% endblock %}
