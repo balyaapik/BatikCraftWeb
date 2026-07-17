@@ -1,17 +1,78 @@
-{% extends 'base.html' %}{% block title %}BatikCraft — Batik, Crafted for Tomorrow{% endblock %}{% block content %}
+{% extends 'base.html' %}
+{% load ui_i18n %}
+{% block title %}{% t "home.title" %}{% endblock %}
+{% block content %}
 <section class="hero section-pad">
   <div class="hero-copy">
-    <span class="eyebrow">Batik · Technology · Ownership</span>
-    <h1>Warisan yang hidup,<br><em>dikreasikan ulang.</em></h1>
-    <p>Rancang motif batik di BatikCraft Studio, terbitkan karya digital, dan temukan kolektor melalui satu ekosistem kreatif.</p>
-    <div class="hero-actions"><a class="btn btn-primary btn-lg" href="{% url 'download' %}">Download Studio</a><a class="btn btn-ghost btn-lg" href="{% url 'market' %}">Jelajahi Market</a></div>
-    <div class="hero-stats"><div><strong>Studio</strong><span>Design freely</span></div><div><strong>API</strong><span>Publish instantly</span></div><div><strong>Market</strong><span>Bid transparently</span></div></div>
+    <span class="eyebrow">{% t "home.hero.eyebrow" %}</span>
+    <h1>{% t "home.hero.line1" %}<br><em>{% t "home.hero.line2" %}</em></h1>
+    <p>{% t "home.hero.body" %}</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary btn-lg" href="{% url 'download' %}"><i class="fa-solid fa-download" aria-hidden="true"></i> {% t "home.hero.download" %}</a>
+      <a class="btn btn-ghost btn-lg" href="{% url 'market' %}"><i class="fa-solid fa-store" aria-hidden="true"></i> {% t "home.hero.explore" %}</a>
+    </div>
+    <div class="hero-stats">
+      <div><strong>Studio</strong><span>{% t "home.stats.design" %}</span></div>
+      <div><strong>API</strong><span>{% t "home.stats.publish" %}</span></div>
+      <div><strong>Market</strong><span>{% t "home.stats.bid" %}</span></div>
+    </div>
   </div>
-  <div class="hero-art"><div class="batik-card card-a"><span>01</span><b>Sekar Jagad</b></div><div class="batik-card card-b"><span>02</span><b>Parang Sagara</b></div><div class="orbit"></div></div>
+  <div class="hero-art">
+    <div class="batik-card card-a"><span>01</span><b>Sekar Jagad</b></div>
+    <div class="batik-card card-b"><span>02</span><b>Parang Sagara</b></div>
+    <div class="orbit"></div>
+  </div>
 </section>
 <section class="marquee"><span>DESIGN IN STUDIO</span><i>✦</i><span>PUBLISH WITH API</span><i>✦</i><span>COLLECT CULTURE</span><i>✦</i><span>OWN THE STORY</span></section>
-<section class="section-pad split-section"><div><span class="eyebrow">One connected workflow</span><h2>Dari kanvas ke kolektor.</h2></div><div class="steps"><article><b>01</b><h3>Craft</h3><p>Buat komposisi motif, warna, dan layer di aplikasi desktop BatikCraft Studio.</p></article><article><b>02</b><h3>Publish</h3><p>Kirim gambar dan metadata project langsung ke dashboard melalui REST API.</p></article><article><b>03</b><h3>Collect</h3><p>Tayangkan NFT, buka auction, dan terima bidding dari akun buyer terverifikasi.</p></article></div></section>
-<section class="section-pad dark-section"><div class="section-heading"><div><span class="eyebrow">Curated market</span><h2>Karya pilihan.</h2></div><a class="text-link light" href="{% url 'market' %}">Lihat semua →</a></div><div class="nft-grid">{% for nft in featured %}{% include 'core/partials/nft_card.html' %}{% empty %}<div class="empty-state"><h3>Market sedang disiapkan.</h3><p>Jalankan <code>python manage.py seed_demo</code> untuk menampilkan contoh karya.</p></div>{% endfor %}</div></section>
-<section class="section-pad journal-section"><div class="section-heading"><div><span class="eyebrow">BatikCraft Journal</span><h2>Cerita di balik karya.</h2></div><a class="text-link" href="{% url 'blog_list' %}">Semua artikel →</a></div><div class="journal-grid">{% for post in posts %}<article class="journal-card"><span>Journal</span><h3><a href="{{ post.get_absolute_url }}">{{ post.title }}</a></h3><p>{{ post.excerpt }}</p><a href="{{ post.get_absolute_url }}">Baca artikel →</a></article>{% empty %}<article class="journal-card"><span>Journal</span><h3>Ruang cerita segera hadir</h3><p>Publikasikan artikel pertama melalui Django Admin.</p></article>{% endfor %}</div></section>
-<section class="cta section-pad"><div><span class="eyebrow">Start your craft</span><h2>Satu ide. Seribu kemungkinan motif.</h2></div><a class="btn btn-primary btn-lg" href="{% url 'register' %}">Buat akun BatikCraft</a></section>
+<section class="section-pad split-section">
+  <div><span class="eyebrow">{% t "home.workflow.eyebrow" %}</span><h2>{% t "home.workflow.title" %}</h2></div>
+  <div class="steps">
+    <article><b>01</b><h3>{% t "home.workflow.craft.title" %}</h3><p>{% t "home.workflow.craft.body" %}</p></article>
+    <article><b>02</b><h3>{% t "home.workflow.publish.title" %}</h3><p>{% t "home.workflow.publish.body" %}</p></article>
+    <article><b>03</b><h3>{% t "home.workflow.collect.title" %}</h3><p>{% t "home.workflow.collect.body" %}</p></article>
+  </div>
+</section>
+<section class="section-pad dark-section">
+  <div class="section-heading">
+    <div><span class="eyebrow">{% t "home.nft.eyebrow" %}</span><h2>{% t "home.nft.title" %}</h2></div>
+    <a class="text-link light" href="{% url 'market' %}">{% t "common.view_all" %}</a>
+  </div>
+  <div class="nft-grid">
+    {% for nft in featured %}
+      {% include 'core/partials/nft_card.html' %}
+    {% empty %}
+      <div class="empty-state"><h3>{% t "home.empty.market.title" %}</h3><p>{% t "home.empty.market.body" %}</p></div>
+    {% endfor %}
+  </div>
+</section>
+<section class="section-pad library-feature-section">
+  <div class="section-heading">
+    <div><span class="eyebrow">{% t "home.library.eyebrow" %}</span><h2>{% t "home.library.title" %}</h2></div>
+    <a class="text-link" href="{% url 'library_market' %}">{% t "common.view_all" %}</a>
+  </div>
+  <div class="nft-grid light-grid">
+    {% for nft in featured_library %}
+      {% include 'core/partials/library_asset_card.html' %}
+    {% empty %}
+      <div class="empty-state library-empty"><i class="fa-solid fa-box-open" aria-hidden="true"></i><h3>{% t "home.empty.library.title" %}</h3><p>{% t "home.empty.library.body" %}</p></div>
+    {% endfor %}
+  </div>
+</section>
+<section class="section-pad journal-section">
+  <div class="section-heading">
+    <div><span class="eyebrow">BatikCraft Journal</span><h2>{% t "home.journal.title" %}</h2></div>
+    <a class="text-link" href="{% url 'blog_list' %}">{% t "home.journal.all" %}</a>
+  </div>
+  <div class="journal-grid">
+    {% for post in posts %}
+      <article class="journal-card"><span>Journal</span><h3><a href="{{ post.get_absolute_url }}">{{ post.title }}</a></h3><p>{{ post.excerpt }}</p><a href="{{ post.get_absolute_url }}">{% t "common.read_article" %}</a></article>
+    {% empty %}
+      <article class="journal-card"><span>Journal</span><h3>{% t "home.empty.journal.title" %}</h3><p>{% t "home.empty.journal.body" %}</p></article>
+    {% endfor %}
+  </div>
+</section>
+<section class="cta section-pad">
+  <div><span class="eyebrow">{% t "home.cta.eyebrow" %}</span><h2>{% t "home.cta.title" %}</h2></div>
+  <a class="btn btn-primary btn-lg" href="{% url 'register' %}"><i class="fa-solid fa-user-plus" aria-hidden="true"></i> {% t "home.cta.button" %}</a>
+</section>
 {% endblock %}
