@@ -16,5 +16,12 @@ jobs:
           cache: pip
       - run: pip install -q -r requirements-dev.txt
       - run: python manage.py check
-      - run: python manage.py test
+      - name: Run Django tests
+        run: python manage.py test 2>&1 | tee django-test.log
+      - name: Upload Django test log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: django-test-log-${{ github.run_id }}
+          path: django-test.log
       - run: ruff check .
