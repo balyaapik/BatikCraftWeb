@@ -5,7 +5,7 @@
 {% block content %}
 <section class="auth-page">
   <div class="auth-art">
-    <span class="eyebrow">Join BatikCraft</span>
+    <span class="eyebrow"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>Join BatikCraft</span>
     <h1>Create, collect,<br><em>preserve culture.</em></h1>
     <p>
       Pilih role Creator untuk mengunggah karya dari Studio atau Buyer untuk
@@ -16,12 +16,17 @@
   <div class="auth-panel">
     <form method="post" class="form-card auth-card">
       {% csrf_token %}
-      <span class="eyebrow">New account</span>
+      <span class="eyebrow"><i class="fa-solid fa-user-shield" aria-hidden="true"></i>New account</span>
       <h2>Buat akun</h2>
+      {{ form.non_field_errors }}
+      {% include "registration/_auth_fields.html" %}
       {% include "registration/_captcha.html" %}
-      {{ form.as_p }}
-      <button class="btn btn-primary btn-block" type="submit">Daftar</button>
+      <button class="btn btn-primary btn-block" type="submit">
+        <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
+        <span>Daftar</span>
+      </button>
       <p class="form-foot">
+        <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
         Sudah punya akun? <a href="{% url 'login' %}">Login</a>
       </p>
     </form>
