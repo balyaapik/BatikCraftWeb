@@ -1,0 +1,33 @@
+<div class="captcha-box" aria-labelledby="captcha-label">
+  <span id="captcha-label" class="eyebrow">Human verification</span>
+  <div class="captcha-image-row">
+    <img
+      id="captcha-image"
+      src="{% url 'captcha_image' %}"
+      alt="Kode CAPTCHA. Ketik lima karakter yang terlihat pada gambar."
+      width="250"
+      height="76"
+    >
+    <button
+      class="btn btn-secondary captcha-refresh"
+      type="button"
+      id="captcha-refresh"
+    >Kode baru</button>
+  </div>
+  <p class="form-foot">Masukkan lima karakter pada gambar. Huruf besar dan kecil dianggap sama.</p>
+</div>
+<script>
+  (() => {
+    const button = document.getElementById("captcha-refresh");
+    const image = document.getElementById("captcha-image");
+    const input = document.getElementById("id_captcha");
+    if (!button || !image) return;
+    button.addEventListener("click", () => {
+      image.src = "{% url 'captcha_image' %}?refresh=1&t=" + Date.now();
+      if (input) {
+        input.value = "";
+        input.focus();
+      }
+    });
+  })();
+</script>
