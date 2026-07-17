@@ -1,0 +1,28 @@
+DETAIL_TRANSLATIONS: dict[str, dict[str, str]] = {
+    "id": {
+        "model.base": "Model dasar",
+        "model.license": "Lisensi",
+        "model.price": "Harga",
+        "model.trigger": "Trigger words",
+        "model.seller": "Penjual",
+        "model.download": "Unduh .batikmodel",
+        "model.purchase": "Beli dan Tambahkan ke Pustaka",
+        "model.login_purchase": "Masuk untuk membeli",
+        "model.form.save": "Simpan sebagai Draft",
+        "nft.form.title": "Tambah NFT",
+        "model.form.title": "Jual Model BatikCraft",
+    },
+    "en": {
+        "model.base": "Base model",
+        "model.license": "License",
+        "model.price": "Price",
+        "model.trigger": "Trigger words",
+        "model.seller": "Seller",
+        "model.download": "Download .batikmodel",
+        "model.purchase": "Buy and Add to Library",
+        "model.login_purchase": "Login to purchase",
+        "model.form.save": "Save as Draft",
+        "nft.form.title": "Add NFT",
+        "model.form.title": "Sell a BatikCraft Model",
+    },
+}
