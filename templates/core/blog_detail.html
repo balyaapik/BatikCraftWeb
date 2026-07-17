@@ -1,9 +1,14 @@
 {% extends 'base.html' %}
-{% load ui_i18n %}
-{% block title %}{{ post.title }} — BatikCraft Journal{% endblock %}
+{% block title %}{{ post.title }} — BatikCraft{% endblock %}
+{% block body_class %}heritage-article-page{% endblock %}
 {% block content %}
+<section class="heritage-page-hero">
+  <span class="heritage-kicker">BatikCraft Journal · {{ post.published_at|date:'d M Y' }}</span>
+  <h1>{{ post.title }}</h1>
+  <p>{{ post.excerpt }}</p>
+</section>
+<div class="ornament-divider" aria-hidden="true"></div>
 <article class="article section-pad">
-  <header><span class="eyebrow"><i class="fa-solid fa-book-open" aria-hidden="true"></i> {% t "blog.eyebrow" %} · {{ post.published_at|date:'d F Y' }}</span><h1>{{ post.title }}</h1><p>{{ post.excerpt }}</p></header>
   {% if post.cover_url %}<img class="article-cover" src="{{ post.cover_url }}" alt="{{ post.title }}">{% endif %}
   <div class="article-body">{{ post.content|linebreaks }}</div>
 </article>

@@ -1,33 +1,27 @@
 {% extends "base.html" %}
 {% load ui_i18n %}
-
 {% block title %}{% t "auth.register.title" %}{% endblock %}
-
+{% block body_class %}heritage-auth{% endblock %}
 {% block content %}
-<section class="auth-page">
-  <div class="auth-art">
-    <span class="eyebrow"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> {% t "auth.register.eyebrow" %}</span>
-    <h1>{% t "auth.register.headline1" %}<br><em>{% t "auth.register.headline2" %}</em></h1>
-    <p>{% t "auth.register.body" %}</p>
-  </div>
-
-  <div class="auth-panel">
-    <form method="post" class="form-card auth-card">
-      {% csrf_token %}
-      <span class="eyebrow"><i class="fa-solid fa-user-shield" aria-hidden="true"></i> {% t "auth.register.new" %}</span>
-      <h2>{% t "auth.register.heading" %}</h2>
-      {{ form.non_field_errors }}
-      {% include "registration/_auth_fields.html" %}
-      {% include "registration/_captcha.html" %}
-      <button class="btn btn-primary btn-block" type="submit">
-        <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
-        <span>{% t "auth.register.button" %}</span>
-      </button>
-      <p class="form-foot">
-        <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
-        {% t "auth.register.have_account" %} <a href="{% url 'login' %}">{% t "auth.register.login" %}</a>
-      </p>
-    </form>
+<section class="heritage-auth-page">
+  <div class="heritage-auth-card">
+    <div class="heritage-auth-art">
+      <span class="heritage-kicker">{% if ui_language == 'en' %}Join BatikCraft{% else %}Bergabung dengan BatikCraft{% endif %}</span>
+      <h1>{% if ui_language == 'en' %}Create.<br>Collect.{% else %}Berkarya.<br>Mengoleksi.{% endif %}</h1>
+      <p>{% if ui_language == 'en' %}Open one account for the Studio connection, NFT market, Library Market, and Model Market.{% else %}Gunakan satu akun untuk koneksi Studio, Market NFT, Market Pustaka, dan Market Model.{% endif %}</p>
+    </div>
+    <div class="heritage-auth-form">
+      <form method="post" class="form-card auth-card">
+        {% csrf_token %}
+        <span class="heritage-kicker"><i class="fa-solid fa-user-shield"></i> {% if ui_language == 'en' %}New account{% else %}Akun baru{% endif %}</span>
+        <h2>{% t "auth.register.heading" %}</h2>
+        {{ form.non_field_errors }}
+        {% include "registration/_auth_fields.html" %}
+        {% include "registration/_captcha.html" %}
+        <button class="btn btn-primary btn-block" type="submit"><i class="fa-solid fa-user-plus"></i> {% t "auth.register.button" %}</button>
+        <p class="form-foot"><i class="fa-solid fa-right-to-bracket"></i> {% t "auth.register.have_account" %} <a href="{% url 'login' %}">{% t "auth.register.login" %}</a></p>
+      </form>
+    </div>
   </div>
 </section>
 {% endblock %}
