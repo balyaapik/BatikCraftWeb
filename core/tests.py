@@ -6,6 +6,7 @@ from django.urls import reverse
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
+from .captcha import CAPTCHA_SESSION_KEY, captcha_answer_for_nonce
 from .models import Bid, ModelAsset, ModelPurchase, NFTAsset, User
 
 
@@ -27,6 +28,10 @@ class BatikCraftAPITests(APITestCase):
     def auth(self, token):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
+    def captcha_answer(self):
+        record = self.client.session[CAPTCHA_SESSION_KEY]
+        return captcha_answer_for_nonce(record["nonce"])
+
     def test_registration_and_login_pages_render(self):
         self.client.credentials()
         register = self.client.get(reverse("register"))
@@ -34,8 +39,62 @@ class BatikCraftAPITests(APITestCase):
 
         self.assertEqual(register.status_code, 200)
         self.assertContains(register, "Buat akun")
+        self.assertContains(register, 'id="id_captcha"')
+        self.assertContains(register, reverse("captcha_image"))
         self.assertEqual(login.status_code, 200)
         self.assertContains(login, "Login BatikCraft")
+        self.assertContains(login, 'id="id_captcha"')
+
+    def test_captcha_image_is_svg_and_not_cacheable(self):
+        response = self.client.get(reverse("captcha_image"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "image/svg+xml")
+        self.assertIn("no-store", response["Cache-Control"])
+        self.assertContains(response, "<svg")
+
+    def test_website_login_requires_correct_captcha(self):
+        self.client.get(reverse("login"))
+        rejected = self.client.post(
+            reverse("login"),
+            {
+                "username": "creator",
+                "password": "strong-pass-123",
+                "captcha": "WRONG",
+            },
+        )
+        self.assertEqual(rejected.status_code, 200)
+        self.assertNotIn("_auth_user_id", self.client.session)
+        self.assertContains(rejected, "CAPTCHA salah")
+
+        answer = self.captcha_answer()
+        accepted = self.client.post(
+            reverse("login"),
+            {
+                "username": "creator",
+                "password": "strong-pass-123",
+                "captcha": answer,
+            },
+        )
+        self.assertEqual(accepted.status_code, 302)
+        self.assertEqual(int(self.client.session["_auth_user_id"]), self.creator.pk)
+
+    def test_registration_requires_correct_captcha(self):
+        self.client.get(reverse("register"))
+        answer = self.captcha_answer()
+        response = self.client.post(
+            reverse("register"),
+            {
+                "username": "newcreator",
+                "email": "newcreator@example.com",
+                "display_name": "New Creator",
+                "role": User.Role.CREATOR,
+                "password1": "A-strong-new-password-2026",
+                "password2": "A-strong-new-password-2026",
+                "captcha": answer,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(User.objects.filter(username="newcreator").exists())
 
     def test_studio_login_and_profile(self):
         response = self.client.post(
