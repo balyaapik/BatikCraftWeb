@@ -5,8 +5,8 @@ from .captcha import issue_captcha, verify_captcha
 from .models import Bid, ModelAsset, NFTAsset, User
 
 
-class _CaptchaFieldMixin:
-    captcha = forms.CharField(
+def _captcha_field() -> forms.CharField:
+    return forms.CharField(
         label="Kode CAPTCHA",
         max_length=8,
         strip=True,
@@ -23,6 +23,8 @@ class _CaptchaFieldMixin:
         },
     )
 
+
+class _CaptchaValidationMixin:
     request = None
 
     def _prepare_captcha(self, request):
@@ -41,8 +43,9 @@ class _CaptchaFieldMixin:
         return value
 
 
-class RegistrationForm(_CaptchaFieldMixin, UserCreationForm):
+class RegistrationForm(_CaptchaValidationMixin, UserCreationForm):
     email = forms.EmailField(required=True)
+    captcha = _captcha_field()
 
     def __init__(self, *args, request=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -72,7 +75,9 @@ class RegistrationForm(_CaptchaFieldMixin, UserCreationForm):
         )
 
 
-class CaptchaAuthenticationForm(_CaptchaFieldMixin, AuthenticationForm):
+class CaptchaAuthenticationForm(_CaptchaValidationMixin, AuthenticationForm):
+    captcha = _captcha_field()
+
     def __init__(self, request=None, *args, **kwargs):
         super().__init__(request=request, *args, **kwargs)
         self._prepare_captcha(request)
