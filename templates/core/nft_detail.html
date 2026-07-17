@@ -1,1 +1,40 @@
-{% extends 'base.html' %}{% block title %}{{ nft.title }} — BatikCraft{% endblock %}{% block content %}<section class="detail-layout section-pad"><div class="detail-image">{% if nft.display_image %}<img src="{{ nft.display_image }}" alt="{{ nft.title }}">{% else %}<div class="image-placeholder">BatikCraft NFT</div>{% endif %}</div><div class="detail-copy"><span class="eyebrow">{{ nft.get_status_display }}</span><h1>{{ nft.title }}</h1><p class="creator-line">Created by <strong>{{ nft.owner.public_name }}</strong></p><p>{{ nft.description|default:"Karya batik digital dari BatikCraft Studio." }}</p><div class="bid-panel"><span>Current price</span><strong>Rp{{ nft.current_price|floatformat:0 }}</strong><small>{{ nft.bids.count }} bid tersimpan</small>{% if user.is_authenticated and user.role == 'buyer' %}<form method="post" action="{% url 'place_bid' nft.pk %}">{% csrf_token %}{{ bid_form.amount }}<button class="btn btn-primary" {% if not nft.is_auction_open %}disabled{% endif %}>Place bid</button></form>{% elif not user.is_authenticated %}<a class="btn btn-primary" href="{% url 'login' %}?next={{ request.path }}">Login untuk bidding</a>{% endif %}</div><dl class="metadata-list"><div><dt>Project ID</dt><dd>{{ nft.source_project_id|default:'—' }}</dd></div><div><dt>Blockchain</dt><dd>{{ nft.blockchain|default:'Belum dimint' }}</dd></div><div><dt>Token ID</dt><dd>{{ nft.token_id|default:'—' }}</dd></div></dl></div></section><section class="section-pad bids-section"><h2>Riwayat bidding</h2><div class="bid-list">{% for bid in bids %}<div><span>{{ bid.bidder.public_name }}</span><strong>Rp{{ bid.amount|floatformat:0 }}</strong><small>{{ bid.created_at|date:'d M Y, H:i' }}</small></div>{% empty %}<p>Belum ada bid. Jadilah kolektor pertama.</p>{% endfor %}</div></section>{% endblock %}
+{% extends 'base.html' %}
+{% load ui_i18n %}
+{% block title %}{{ nft.title }} — BatikCraft{% endblock %}
+{% block content %}
+<section class="detail-layout section-pad">
+  <div class="detail-image">{% if nft.display_image %}<img src="{{ nft.display_image }}" alt="{{ nft.title }}">{% else %}<div class="image-placeholder">BatikCraft NFT</div>{% endif %}</div>
+  <div class="detail-copy">
+    <span class="eyebrow">{% if nft.metadata.source_type == 'library_asset' %}<i class="fa-solid fa-puzzle-piece" aria-hidden="true"></i> {% t "detail.library_asset" %} · {% endif %}{{ nft.get_status_display }}</span>
+    <h1>{{ nft.title }}</h1>
+    <p class="creator-line">{% t "detail.created_by" %} <strong>{{ nft.owner.public_name }}</strong></p>
+    <p>{% if nft.description %}{{ nft.description }}{% else %}{% t "detail.default_description" %}{% endif %}</p>
+    {% if nft.metadata.source_type == 'library_asset' %}
+      <dl class="metadata-list asset-detail-meta">
+        <div><dt>{% t "common.category" %}</dt><dd>{{ nft.metadata.asset_category|default:'—' }}</dd></div>
+        <div><dt>{% t "common.license" %}</dt><dd>{{ nft.metadata.license|default:'—' }}</dd></div>
+        <div><dt>{% t "common.dimensions" %}</dt><dd>{% if nft.metadata.width and nft.metadata.height %}{{ nft.metadata.width }} × {{ nft.metadata.height }} px{% else %}—{% endif %}</dd></div>
+      </dl>
+    {% endif %}
+    <div class="bid-panel">
+      <span>{% t "detail.current_price" %}</span>
+      <strong>Rp{{ nft.current_price|floatformat:0 }}</strong>
+      <small>{{ nft.bids.count }} {% t "detail.saved_bids" %}</small>
+      {% if user.is_authenticated and user.role == 'buyer' %}
+        <form method="post" action="{% url 'place_bid' nft.pk %}">{% csrf_token %}{{ bid_form.amount }}<button class="btn btn-primary" {% if not nft.is_auction_open %}disabled{% endif %}>{% t "detail.place_bid" %}</button></form>
+      {% elif not user.is_authenticated %}
+        <a class="btn btn-primary" href="{% url 'login' %}?next={{ request.path }}">{% t "detail.login_bid" %}</a>
+      {% endif %}
+    </div>
+    <dl class="metadata-list">
+      <div><dt>Project ID</dt><dd>{{ nft.source_project_id|default:'—' }}</dd></div>
+      <div><dt>Blockchain</dt><dd>{% if nft.blockchain %}{{ nft.blockchain }}{% else %}{% t "detail.not_minted" %}{% endif %}</dd></div>
+      <div><dt>Token ID</dt><dd>{{ nft.token_id|default:'—' }}</dd></div>
+    </dl>
+  </div>
+</section>
+<section class="section-pad bids-section">
+  <h2>{% t "detail.bid_history" %}</h2>
+  <div class="bid-list">{% for bid in bids %}<div><span>{{ bid.bidder.public_name }}</span><strong>Rp{{ bid.amount|floatformat:0 }}</strong><small>{{ bid.created_at|date:'d M Y, H:i' }}</small></div>{% empty %}<p>{% t "detail.no_bid" %}</p>{% endfor %}</div>
+</section>
+{% endblock %}
