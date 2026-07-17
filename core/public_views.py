@@ -11,12 +11,17 @@ from .models import BlogPost, ModelAsset, NFTAsset
 from .ui_language import LANGUAGE_SESSION_KEY, normalize_language
 
 LIBRARY_SOURCE_TYPE = "library_asset"
+REGULAR_NFT_FILTER = Q(metadata__source_type__isnull=True) | ~Q(
+    metadata__source_type=LIBRARY_SOURCE_TYPE
+)
 
 
 def home(request: HttpRequest) -> HttpResponse:
     featured = (
-        NFTAsset.objects.filter(status=NFTAsset.Status.LISTED)
-        .exclude(metadata__source_type=LIBRARY_SOURCE_TYPE)
+        NFTAsset.objects.filter(
+            REGULAR_NFT_FILTER,
+            status=NFTAsset.Status.LISTED,
+        )
         .select_related("owner")
         .annotate(bid_count=Count("bids"), max_bid=Max("bids__amount"))[:6]
     )
@@ -47,8 +52,10 @@ def home(request: HttpRequest) -> HttpResponse:
 
 def nft_market(request: HttpRequest) -> HttpResponse:
     items = (
-        NFTAsset.objects.filter(status=NFTAsset.Status.LISTED)
-        .exclude(metadata__source_type=LIBRARY_SOURCE_TYPE)
+        NFTAsset.objects.filter(
+            REGULAR_NFT_FILTER,
+            status=NFTAsset.Status.LISTED,
+        )
         .select_related("owner")
         .annotate(bid_count=Count("bids"), max_bid=Max("bids__amount"))
     )
