@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load ui_i18n %}
 {% block title %}{{ model.name }} — BatikCraft{% endblock %}
 {% block content %}
 <section class="section-pad detail-grid">
@@ -14,21 +15,21 @@
     <h1>{{ model.name }}</h1>
     <p>{{ model.description|linebreaksbr }}</p>
     <div class="stats-grid">
-      <div><span>Base model</span><strong>{{ model.base_model_family }}</strong></div>
-      <div><span>Lisensi</span><strong>{{ model.get_license_type_display }}</strong></div>
-      <div><span>Harga</span><strong>Rp{{ model.price|floatformat:0 }}</strong></div>
+      <div><span>{% t "model.base" %}</span><strong>{{ model.base_model_family }}</strong></div>
+      <div><span>{% t "model.license" %}</span><strong>{{ model.get_license_type_display }}</strong></div>
+      <div><span>{% t "model.price" %}</span><strong>Rp{{ model.price|floatformat:0 }}</strong></div>
     </div>
-    <p><strong>Trigger words:</strong> {{ model.trigger_words|join:', ' }}</p>
-    <p><strong>Seller:</strong> {{ model.seller.public_name }}</p>
+    <p><strong>{% t "model.trigger" %}:</strong> {{ model.trigger_words|join:', ' }}</p>
+    <p><strong>{% t "model.seller" %}:</strong> {{ model.seller.public_name }}</p>
     {% if owned %}
-      <a class="btn btn-primary" href="{% url 'model_download' model.pk %}">Download .batikmodel</a>
+      <a class="btn btn-primary" href="{% url 'model_download' model.pk %}"><i class="fa-solid fa-download" aria-hidden="true"></i> {% t "model.download" %}</a>
     {% elif user.is_authenticated %}
       <form method="post" action="{% url 'model_purchase' model.pk %}">
         {% csrf_token %}
-        <button class="btn btn-primary" type="submit">Beli dan Tambahkan ke Library</button>
+        <button class="btn btn-primary" type="submit"><i class="fa-solid fa-cart-shopping" aria-hidden="true"></i> {% t "model.purchase" %}</button>
       </form>
     {% else %}
-      <a class="btn btn-primary" href="{% url 'login' %}?next={{ request.path }}">Login untuk membeli</a>
+      <a class="btn btn-primary" href="{% url 'login' %}?next={{ request.path }}"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> {% t "model.login_purchase" %}</a>
     {% endif %}
   </div>
 </section>
