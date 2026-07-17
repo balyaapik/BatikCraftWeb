@@ -5,7 +5,7 @@
 {% block content %}
 <section class="auth-page">
   <div class="auth-art">
-    <span class="eyebrow">Welcome back</span>
+    <span class="eyebrow"><i class="fa-solid fa-palette" aria-hidden="true"></i>Welcome back</span>
     <h1>Continue your<br><em>creative journey.</em></h1>
     <p>Satu login untuk Creator Dashboard, Buyer Market, dan BatikCraft Studio API.</p>
   </div>
@@ -13,18 +13,23 @@
   <div class="auth-panel">
     <form method="post" class="form-card auth-card">
       {% csrf_token %}
-      <span class="eyebrow">Secure access</span>
+      <span class="eyebrow"><i class="fa-solid fa-shield" aria-hidden="true"></i>Secure access</span>
       <h2>Login BatikCraft</h2>
       {% if form.errors %}
         <div class="form-errors">Periksa username, password, dan kode CAPTCHA.</div>
       {% endif %}
+      {{ form.non_field_errors }}
+      {% include "registration/_auth_fields.html" %}
       {% include "registration/_captcha.html" %}
-      {{ form.as_p }}
       {% if next %}
         <input type="hidden" name="next" value="{{ next }}">
       {% endif %}
-      <button class="btn btn-primary btn-block" type="submit">Login</button>
+      <button class="btn btn-primary btn-block" type="submit">
+        <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
+        <span>Login</span>
+      </button>
       <p class="form-foot">
+        <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
         Belum punya akun? <a href="{% url 'register' %}">Daftar sekarang</a>
       </p>
     </form>

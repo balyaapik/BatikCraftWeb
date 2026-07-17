@@ -1,5 +1,8 @@
 <div class="captcha-box" aria-labelledby="captcha-label">
-  <span id="captcha-label" class="eyebrow">Human verification</span>
+  <span id="captcha-label" class="eyebrow">
+    <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+    Human verification
+  </span>
   <div class="captcha-image-row">
     <img
       id="captcha-image"
@@ -12,9 +15,24 @@
       class="btn btn-secondary captcha-refresh"
       type="button"
       id="captcha-refresh"
-    >Kode baru</button>
+      aria-label="Buat kode CAPTCHA baru"
+    >
+      <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
+      <span>Kode baru</span>
+    </button>
   </div>
-  <p class="form-foot">Masukkan lima karakter pada gambar. Huruf besar dan kecil dianggap sama.</p>
+  <div class="captcha-field{% if form.captcha.errors %} has-error{% endif %}">
+    <label for="{{ form.captcha.id_for_label }}">
+      <i class="fa-solid fa-key" aria-hidden="true"></i>
+      <span>{{ form.captcha.label }}</span>
+    </label>
+    {{ form.captcha }}
+    {{ form.captcha.errors }}
+  </div>
+  <p class="captcha-help">
+    <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+    <span>Masukkan lima karakter pada gambar. Huruf besar dan kecil dianggap sama.</span>
+  </p>
 </div>
 <script>
   (() => {
