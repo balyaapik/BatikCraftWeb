@@ -1,0 +1,27 @@
+{% for field in form %}
+  {% if field.name != "captcha" %}
+    <div class="auth-field{% if field.errors %} has-error{% endif %}">
+      <label for="{{ field.id_for_label }}">
+        {% if field.name == "username" %}
+          <i class="fa-solid fa-user" aria-hidden="true"></i>
+        {% elif field.name == "email" %}
+          <i class="fa-solid fa-envelope" aria-hidden="true"></i>
+        {% elif field.name == "display_name" %}
+          <i class="fa-solid fa-signature" aria-hidden="true"></i>
+        {% elif field.name == "role" %}
+          <i class="fa-solid fa-users" aria-hidden="true"></i>
+        {% elif field.name == "password" or field.name == "password1" or field.name == "password2" %}
+          <i class="fa-solid fa-lock" aria-hidden="true"></i>
+        {% else %}
+          <i class="fa-solid fa-pen" aria-hidden="true"></i>
+        {% endif %}
+        <span>{{ field.label }}</span>
+      </label>
+      {{ field }}
+      {% if field.help_text %}
+        <span class="helptext">{{ field.help_text|safe }}</span>
+      {% endif %}
+      {{ field.errors }}
+    </div>
+  {% endif %}
+{% endfor %}
