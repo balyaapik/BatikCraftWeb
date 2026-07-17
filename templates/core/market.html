@@ -1,1 +1,24 @@
-{% extends 'base.html' %}{% block title %}NFT Market — BatikCraft{% endblock %}{% block content %}<section class="page-hero section-pad"><span class="eyebrow">Digital Batik Marketplace</span><h1>Collect the craft.<br><em>Own the story.</em></h1><form class="search-bar"><input type="search" name="q" value="{{ query }}" placeholder="Cari motif, kreator, atau cerita..."><button class="btn btn-primary">Cari</button></form></section><section class="section-pad market-section"><div class="section-heading"><h2>Live Auctions</h2><span>{{ items|length }} karya</span></div><div class="nft-grid light-grid">{% for nft in items %}{% include 'core/partials/nft_card.html' %}{% empty %}<div class="empty-state"><h3>Belum ada NFT yang ditayangkan.</h3><p>Creator dapat mengunggah karya dari dashboard atau BatikCraft Studio.</p></div>{% endfor %}</div></section>{% endblock %}
+{% extends 'base.html' %}
+{% load ui_i18n %}
+{% block title %}{% t "market.nft.title" %}{% endblock %}
+{% block content %}
+<section class="page-hero section-pad">
+  <span class="eyebrow"><i class="fa-solid fa-gavel" aria-hidden="true"></i> {% t "market.nft.eyebrow" %}</span>
+  <h1>{% t "market.nft.line1" %}<br><em>{% t "market.nft.line2" %}</em></h1>
+  <form class="search-bar" method="get">
+    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+    <input type="search" name="q" value="{{ query }}" placeholder="{% t 'market.nft.placeholder' %}">
+    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> {% t "common.search" %}</button>
+  </form>
+</section>
+<section class="section-pad market-section">
+  <div class="section-heading"><h2>{% t "market.nft.live" %}</h2><span>{{ items|length }} {% t "common.works" %}</span></div>
+  <div class="nft-grid light-grid">
+    {% for nft in items %}
+      {% include 'core/partials/nft_card.html' %}
+    {% empty %}
+      <div class="empty-state"><i class="fa-solid fa-image" aria-hidden="true"></i><h3>{% t "market.nft.empty.title" %}</h3><p>{% t "market.nft.empty.body" %}</p></div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
