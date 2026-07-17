@@ -16,8 +16,9 @@
       <span class="eyebrow">Secure access</span>
       <h2>Login BatikCraft</h2>
       {% if form.errors %}
-        <div class="form-errors">Username atau password tidak sesuai.</div>
+        <div class="form-errors">Periksa username, password, dan kode CAPTCHA.</div>
       {% endif %}
+      {% include "registration/_captcha.html" %}
       {{ form.as_p }}
       {% if next %}
         <input type="hidden" name="next" value="{{ next }}">
