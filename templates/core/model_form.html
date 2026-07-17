@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} — BatikCraft{% endblock %}
+{% block content %}
+<section class="section-pad form-shell">
+  <div class="section-heading">
+    <div>
+      <span class="eyebrow">Model Marketplace</span>
+      <h1>{{ title }}</h1>
+    </div>
+  </div>
+  <form method="post" enctype="multipart/form-data" class="form-card">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="btn btn-primary" type="submit">Simpan sebagai Draft</button>
+  </form>
+</section>
+{% endblock %}
