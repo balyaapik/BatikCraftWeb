@@ -4,6 +4,7 @@ EXTRA_TRANSLATIONS: dict[str, dict[str, str]] = {
         "market.common.current_bid": "Penawaran saat ini",
         "market.common.bids": "penawaran",
         "market.common.view": "Lihat",
+        "auth.login.heading": "Login BatikCraft",
         "auth.field.username": "Nama pengguna",
         "auth.field.email": "Email",
         "auth.field.display_name": "Nama tampilan",
