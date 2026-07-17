@@ -1,39 +1,29 @@
 {% extends "base.html" %}
 {% load ui_i18n %}
-
 {% block title %}{% t "auth.login.title" %}{% endblock %}
-
+{% block body_class %}heritage-auth{% endblock %}
 {% block content %}
-<section class="auth-page">
-  <div class="auth-art">
-    <span class="eyebrow"><i class="fa-solid fa-palette" aria-hidden="true"></i> {% t "auth.login.eyebrow" %}</span>
-    <h1>{% t "auth.login.headline1" %}<br><em>{% t "auth.login.headline2" %}</em></h1>
-    <p>{% t "auth.login.body" %}</p>
-  </div>
-
-  <div class="auth-panel">
-    <form method="post" class="form-card auth-card">
-      {% csrf_token %}
-      <span class="eyebrow"><i class="fa-solid fa-shield" aria-hidden="true"></i> {% t "auth.login.secure" %}</span>
-      <h2>{% t "auth.login.heading" %}</h2>
-      {% if form.errors %}
-        <div class="form-errors">{% t "auth.login.error" %}</div>
-      {% endif %}
-      {{ form.non_field_errors }}
-      {% include "registration/_auth_fields.html" %}
-      {% include "registration/_captcha.html" %}
-      {% if next %}
-        <input type="hidden" name="next" value="{{ next }}">
-      {% endif %}
-      <button class="btn btn-primary btn-block" type="submit">
-        <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
-        <span>{% t "auth.login.button" %}</span>
-      </button>
-      <p class="form-foot">
-        <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
-        {% t "auth.login.no_account" %} <a href="{% url 'register' %}">{% t "auth.login.register" %}</a>
-      </p>
-    </form>
+<section class="heritage-auth-page">
+  <div class="heritage-auth-card">
+    <div class="heritage-auth-art">
+      <span class="heritage-kicker">{% if ui_language == 'en' %}Welcome home{% else %}Selamat datang{% endif %}</span>
+      <h1>{% if ui_language == 'en' %}Welcome<br>Back!{% else %}Selamat<br>Kembali!{% endif %}</h1>
+      <p>{% if ui_language == 'en' %}Continue your creative journey across Studio, marketplaces, and your digital library.{% else %}Lanjutkan perjalanan kreatifmu di Studio, marketplace, dan pustaka digital.{% endif %}</p>
+    </div>
+    <div class="heritage-auth-form">
+      <form method="post" class="form-card auth-card">
+        {% csrf_token %}
+        <span class="heritage-kicker"><i class="fa-solid fa-shield-halved"></i> {% if ui_language == 'en' %}Secure access{% else %}Akses aman{% endif %}</span>
+        <h2>{% if ui_language == 'en' %}Login account{% else %}Masuk akun{% endif %}</h2>
+        {% if form.errors %}<div class="form-errors">{% t "auth.login.error" %}</div>{% endif %}
+        {{ form.non_field_errors }}
+        {% include "registration/_auth_fields.html" %}
+        {% include "registration/_captcha.html" %}
+        {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+        <button class="btn btn-primary btn-block" type="submit"><i class="fa-solid fa-right-to-bracket"></i> {% t "auth.login.button" %}</button>
+        <p class="form-foot"><i class="fa-solid fa-user-plus"></i> {% t "auth.login.no_account" %} <a href="{% url 'register' %}">{% t "auth.login.register" %}</a></p>
+      </form>
+    </div>
   </div>
 </section>
 {% endblock %}
