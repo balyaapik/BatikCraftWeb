@@ -1,3 +1,4 @@
+{% load ui_i18n %}
 {% for field in form %}
   {% if field.name != "captcha" %}
     <div class="auth-field{% if field.errors %} has-error{% endif %}">
@@ -15,7 +16,23 @@
         {% else %}
           <i class="fa-solid fa-pen" aria-hidden="true"></i>
         {% endif %}
-        <span>{{ field.label }}</span>
+        {% if field.name == "username" %}
+          <span>{% t "auth.field.username" %}</span>
+        {% elif field.name == "email" %}
+          <span>{% t "auth.field.email" %}</span>
+        {% elif field.name == "display_name" %}
+          <span>{% t "auth.field.display_name" %}</span>
+        {% elif field.name == "role" %}
+          <span>{% t "auth.field.role" %}</span>
+        {% elif field.name == "password" %}
+          <span>{% t "auth.field.password" %}</span>
+        {% elif field.name == "password1" %}
+          <span>{% t "auth.field.password1" %}</span>
+        {% elif field.name == "password2" %}
+          <span>{% t "auth.field.password2" %}</span>
+        {% else %}
+          <span>{{ field.label }}</span>
+        {% endif %}
       </label>
       {{ field }}
       {% if field.help_text %}

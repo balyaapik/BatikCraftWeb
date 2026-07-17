@@ -1,1 +1,9 @@
-{% extends 'base.html' %}{% block title %}Profil — BatikCraft{% endblock %}{% block content %}<section class="form-page section-pad"><div class="form-intro"><span class="eyebrow">Account settings</span><h1>Profil BatikCraft.</h1><p>Informasi ini ditampilkan pada karya dan aktivitas market Anda.</p></div><form method="post" enctype="multipart/form-data" class="form-card">{% csrf_token %}{{ form.as_p }}<button class="btn btn-primary" type="submit">Simpan profil</button></form></section>{% endblock %}
+{% extends 'base.html' %}
+{% load ui_i18n %}
+{% block title %}{% t "profile.title" %}{% endblock %}
+{% block content %}
+<section class="form-page section-pad">
+  <div class="form-intro"><span class="eyebrow">{% t "profile.eyebrow" %}</span><h1>{% t "profile.heading" %}</h1><p>{% t "profile.body" %}</p></div>
+  <form method="post" enctype="multipart/form-data" class="form-card">{% csrf_token %}{{ form.as_p }}<button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> {% t "profile.save" %}</button></form>
+</section>
+{% endblock %}

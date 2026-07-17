@@ -1,17 +1,18 @@
 {% extends 'base.html' %}
-{% block title %}{{ title }} — BatikCraft{% endblock %}
+{% load ui_i18n %}
+{% block title %}{% t "model.form.title" %} — BatikCraft{% endblock %}
 {% block content %}
 <section class="section-pad form-shell">
   <div class="section-heading">
     <div>
-      <span class="eyebrow">Model Marketplace</span>
-      <h1>{{ title }}</h1>
+      <span class="eyebrow">{% t "form.model.market" %}</span>
+      <h1>{% t "model.form.title" %}</h1>
     </div>
   </div>
   <form method="post" enctype="multipart/form-data" class="form-card">
     {% csrf_token %}
     {{ form.as_p }}
-    <button class="btn btn-primary" type="submit">Simpan sebagai Draft</button>
+    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> {% t "model.form.save" %}</button>
   </form>
 </section>
 {% endblock %}

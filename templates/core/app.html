@@ -1,1 +1,18 @@
-{% extends 'base.html' %}{% block title %}App Ecosystem — BatikCraft{% endblock %}{% block content %}<section class="page-hero section-pad"><span class="eyebrow">Connected creative ecosystem</span><h1>One craft.<br><em>Three surfaces.</em></h1></section><section class="section-pad app-grid"><article><span>01</span><h2>Studio</h2><p>Aplikasi desktop untuk membuat dan mengekspor desain batik.</p><a href="{% url 'download' %}">Pelajari Studio →</a></article><article><span>02</span><h2>Creator Dashboard</h2><p>Kelola profil, draft NFT, harga auction, metadata, dan status karya.</p><a href="{% url 'register' %}">Buat akun creator →</a></article><article><span>03</span><h2>Buyer Market</h2><p>Temukan karya, ikuti auction, dan kelola riwayat bidding.</p><a href="{% url 'market' %}">Masuk market →</a></article></section><section class="section-pad api-banner"><div><span class="eyebrow">Developer ready</span><h2>REST API untuk BatikCraft Studio.</h2><p>Token authentication, multipart image upload, JSON metadata, publish endpoint, dan bidding endpoint.</p></div><a class="btn btn-primary" href="/api/v1/">Buka API browser</a></section>{% endblock %}
+{% extends 'base.html' %}
+{% load ui_i18n %}
+{% block title %}{% t "app.title" %}{% endblock %}
+{% block content %}
+<section class="page-hero section-pad">
+  <span class="eyebrow"><i class="fa-solid fa-link" aria-hidden="true"></i> {% t "app.eyebrow" %}</span>
+  <h1>{% t "app.line1" %}<br><em>{% t "app.line2" %}</em></h1>
+</section>
+<section class="section-pad app-grid">
+  <article><span>01</span><h2>Studio</h2><p>{% t "app.studio.body" %}</p><a href="{% url 'download' %}">{% t "app.studio.link" %}</a></article>
+  <article><span>02</span><h2>Creator Dashboard</h2><p>{% t "app.creator.body" %}</p><a href="{% url 'register' %}">{% t "app.creator.link" %}</a></article>
+  <article><span>03</span><h2>Buyer Market</h2><p>{% t "app.buyer.body" %}</p><a href="{% url 'market' %}">{% t "app.buyer.link" %}</a></article>
+</section>
+<section class="section-pad api-banner">
+  <div><span class="eyebrow">{% t "app.api.eyebrow" %}</span><h2>{% t "app.api.title" %}</h2><p>{% t "app.api.body" %}</p></div>
+  <a class="btn btn-primary" href="/api/v1/"><i class="fa-solid fa-code" aria-hidden="true"></i> {% t "app.api.button" %}</a>
+</section>
+{% endblock %}

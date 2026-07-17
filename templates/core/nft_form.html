@@ -1,1 +1,9 @@
-{% extends 'base.html' %}{% block title %}{{ title }} — BatikCraft{% endblock %}{% block content %}<section class="form-page section-pad"><div class="form-intro"><span class="eyebrow">Creator workspace</span><h1>{{ title }}.</h1><p>Karya akan tersimpan sebagai draft. Anda dapat mempublikasikannya setelah gambar dan harga awal tersedia.</p></div><form method="post" enctype="multipart/form-data" class="form-card">{% csrf_token %}{{ form.as_p }}<button class="btn btn-primary" type="submit">Simpan draft</button></form></section>{% endblock %}
+{% extends 'base.html' %}
+{% load ui_i18n %}
+{% block title %}{% t "nft.form.title" %} — BatikCraft{% endblock %}
+{% block content %}
+<section class="form-page section-pad">
+  <div class="form-intro"><span class="eyebrow">{% t "form.creator_workspace" %}</span><h1>{% t "nft.form.title" %}.</h1><p>{% t "form.nft.body" %}</p></div>
+  <form method="post" enctype="multipart/form-data" class="form-card">{% csrf_token %}{{ form.as_p }}<button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> {% t "form.save_draft" %}</button></form>
+</section>
+{% endblock %}

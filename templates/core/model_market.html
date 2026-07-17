@@ -1,19 +1,21 @@
 {% extends 'base.html' %}
-{% block title %}Model Market — BatikCraft{% endblock %}
+{% load ui_i18n %}
+{% block title %}{% t "market.model.title" %}{% endblock %}
 {% block content %}
 <section class="page-hero section-pad">
-  <span class="eyebrow">BatikCraft Model Marketplace</span>
-  <h1>Train once.<br><em>Share the craft.</em></h1>
-  <p>Temukan model LoRA BatikCraft untuk ornamen, pola, flora, fauna, dan wayang.</p>
-  <form class="search-bar">
-    <input type="search" name="q" value="{{ query }}" placeholder="Cari model, kategori, atau seller...">
-    <button class="btn btn-primary">Cari</button>
+  <span class="eyebrow"><i class="fa-solid fa-brain" aria-hidden="true"></i> {% t "market.model.eyebrow" %}</span>
+  <h1>{% t "market.model.line1" %}<br><em>{% t "market.model.line2" %}</em></h1>
+  <p>{% t "market.model.body" %}</p>
+  <form class="search-bar" method="get">
+    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+    <input type="search" name="q" value="{{ query }}" placeholder="{% t 'market.model.placeholder' %}">
+    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> {% t "common.search" %}</button>
   </form>
 </section>
 <section class="section-pad market-section">
   <div class="section-heading">
-    <h2>Model Tersedia</h2>
-    <span>{{ items|length }} model</span>
+    <h2>{% t "market.model.available" %}</h2>
+    <span>{{ items|length }} {% t "common.models" %}</span>
   </div>
   <div class="nft-grid light-grid">
     {% for model in items %}
@@ -24,22 +26,20 @@
           {% else %}
             <div class="empty-state"><strong>{{ model.base_model_family|upper }}</strong></div>
           {% endif %}
+          <span class="status-pill"><i class="fa-solid fa-brain" aria-hidden="true"></i> {{ model.base_model_family|upper }}</span>
         </a>
         <div class="nft-info">
           <span class="eyebrow">{{ model.category }} · {{ model.version }}</span>
           <h3><a href="{% url 'model_detail' model.pk %}">{{ model.name }}</a></h3>
           <p>{{ model.description|truncatechars:120 }}</p>
           <div class="nft-meta">
-            <span>{{ model.seller.public_name }}</span>
+            <span>{% t "common.by" %} {{ model.seller.public_name }}</span>
             <strong>Rp{{ model.price|floatformat:0 }}</strong>
           </div>
         </div>
       </article>
     {% empty %}
-      <div class="empty-state">
-        <h3>Belum ada model yang dijual.</h3>
-        <p>Creator dapat mengunggah model dari BatikCraft Studio atau dashboard.</p>
-      </div>
+      <div class="empty-state"><i class="fa-solid fa-brain" aria-hidden="true"></i><h3>{% t "market.model.empty.title" %}</h3><p>{% t "market.model.empty.body" %}</p></div>
     {% endfor %}
   </div>
 </section>

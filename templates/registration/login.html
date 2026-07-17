@@ -1,22 +1,23 @@
 {% extends "base.html" %}
+{% load ui_i18n %}
 
-{% block title %}Login — BatikCraft{% endblock %}
+{% block title %}{% t "auth.login.title" %}{% endblock %}
 
 {% block content %}
 <section class="auth-page">
   <div class="auth-art">
-    <span class="eyebrow"><i class="fa-solid fa-palette" aria-hidden="true"></i>Welcome back</span>
-    <h1>Continue your<br><em>creative journey.</em></h1>
-    <p>Satu login untuk Creator Dashboard, Buyer Market, dan BatikCraft Studio API.</p>
+    <span class="eyebrow"><i class="fa-solid fa-palette" aria-hidden="true"></i> {% t "auth.login.eyebrow" %}</span>
+    <h1>{% t "auth.login.headline1" %}<br><em>{% t "auth.login.headline2" %}</em></h1>
+    <p>{% t "auth.login.body" %}</p>
   </div>
 
   <div class="auth-panel">
     <form method="post" class="form-card auth-card">
       {% csrf_token %}
-      <span class="eyebrow"><i class="fa-solid fa-shield" aria-hidden="true"></i>Secure access</span>
-      <h2>Login BatikCraft</h2>
+      <span class="eyebrow"><i class="fa-solid fa-shield" aria-hidden="true"></i> {% t "auth.login.secure" %}</span>
+      <h2>{% t "auth.login.heading" %}</h2>
       {% if form.errors %}
-        <div class="form-errors">Periksa username, password, dan kode CAPTCHA.</div>
+        <div class="form-errors">{% t "auth.login.error" %}</div>
       {% endif %}
       {{ form.non_field_errors }}
       {% include "registration/_auth_fields.html" %}
@@ -26,11 +27,11 @@
       {% endif %}
       <button class="btn btn-primary btn-block" type="submit">
         <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
-        <span>Login</span>
+        <span>{% t "auth.login.button" %}</span>
       </button>
       <p class="form-foot">
         <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
-        Belum punya akun? <a href="{% url 'register' %}">Daftar sekarang</a>
+        {% t "auth.login.no_account" %} <a href="{% url 'register' %}">{% t "auth.login.register" %}</a>
       </p>
     </form>
   </div>

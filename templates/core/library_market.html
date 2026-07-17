@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% load ui_i18n %}
+{% block title %}{% t "market.library.title" %}{% endblock %}
+{% block content %}
+<section class="page-hero section-pad library-hero">
+  <span class="eyebrow"><i class="fa-solid fa-shapes" aria-hidden="true"></i> {% t "market.library.eyebrow" %}</span>
+  <h1>{% t "market.library.line1" %}<br><em>{% t "market.library.line2" %}</em></h1>
+  <p>{% t "market.library.body" %}</p>
+  <form class="search-bar" method="get">
+    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+    <input type="search" name="q" value="{{ query }}" placeholder="{% t 'market.library.placeholder' %}">
+    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> {% t "common.search" %}</button>
+  </form>
+</section>
+<section class="section-pad market-section">
+  <div class="section-heading">
+    <h2>{% t "market.library.available" %}</h2>
+    <span>{{ items|length }} {% t "common.works" %}</span>
+  </div>
+  <div class="nft-grid light-grid">
+    {% for nft in items %}
+      {% include 'core/partials/library_asset_card.html' %}
+    {% empty %}
+      <div class="empty-state library-empty">
+        <i class="fa-solid fa-box-open" aria-hidden="true"></i>
+        <h3>{% t "market.library.empty.title" %}</h3>
+        <p>{% t "market.library.empty.body" %}</p>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
