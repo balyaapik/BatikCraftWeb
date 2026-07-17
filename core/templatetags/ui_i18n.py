@@ -1,6 +1,7 @@
 from django import template
 
 from core.ui_language import DEFAULT_LANGUAGE, normalize_language, text
+from core.ui_language_dashboard import DASHBOARD_TRANSLATIONS
 from core.ui_language_extra import EXTRA_TRANSLATIONS
 
 register = template.Library()
@@ -12,6 +13,7 @@ def t(context, key: str) -> str:
 
     language = normalize_language(context.get("ui_language", DEFAULT_LANGUAGE))
     normalized_key = str(key)
-    if normalized_key in EXTRA_TRANSLATIONS.get(language, {}):
-        return EXTRA_TRANSLATIONS[language][normalized_key]
+    for catalog in (DASHBOARD_TRANSLATIONS, EXTRA_TRANSLATIONS):
+        if normalized_key in catalog.get(language, {}):
+            return catalog[language][normalized_key]
     return text(language, normalized_key)
