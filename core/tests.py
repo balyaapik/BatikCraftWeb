@@ -27,6 +27,16 @@ class BatikCraftAPITests(APITestCase):
     def auth(self, token):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
+    def test_registration_and_login_pages_render(self):
+        self.client.credentials()
+        register = self.client.get(reverse("register"))
+        login = self.client.get(reverse("login"))
+
+        self.assertEqual(register.status_code, 200)
+        self.assertContains(register, "Buat akun")
+        self.assertEqual(login.status_code, 200)
+        self.assertContains(login, "Login BatikCraft")
+
     def test_studio_login_and_profile(self):
         response = self.client.post(
             reverse("api_token"),
