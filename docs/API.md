@@ -55,7 +55,22 @@ Content-Type: application/json
 }
 ```
 
-`source_project_id` bersifat unik per creator: satu project Studio tidak dapat dibuat dua kali oleh akun yang sama.
+`source_project_id` opsional. Jika diisi, nilainya unik per creator: satu project
+Studio tidak dapat dibuat dua kali oleh akun yang sama, dan percobaan kedua
+dijawab `400` dengan error pada field `source_project_id`.
+
+### Field JSON melalui multipart
+
+Pada `multipart/form-data` setiap nilai dikirim sebagai teks, sehingga field JSON
+(`metadata`, `trigger_words`, `capabilities`) diterima dalam dua bentuk:
+
+```
+metadata      = {"canvas": {"width": 1920}}   # string JSON
+trigger_words = ["bcr_kawung", "bcr_parang"]  # string JSON
+trigger_words = bcr_kawung, bcr_parang        # daftar dipisah koma
+```
+
+Nilai yang bukan JSON valid pada field objek (`metadata`) dijawab `400`.
 
 ## 4. Publish ke Market
 
@@ -86,3 +101,16 @@ Content-Type: application/json
 ```
 
 Bid ditolak jika auction tertutup, buyer adalah pemilik karya, atau nominal tidak melebihi harga berjalan.
+
+
+## 9. Unduh model yang sudah dibeli
+
+```http
+GET /api/v1/models/{id}/download/
+Authorization: Token <TOKEN>
+```
+
+File dialirkan langsung oleh server sebagai attachment. Hanya penjual,
+superuser, dan pembeli dengan status `paid` yang diizinkan; permintaan lain
+dijawab `403`. Endpoint web `GET /models/{id}/download/` berperilaku sama dan
+tidak lagi mengarahkan pengguna ke URL storage.

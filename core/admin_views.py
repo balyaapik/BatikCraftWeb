@@ -8,6 +8,7 @@ from django.db.models import Count, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.text import slugify
+from django.views.decorators.http import require_POST
 
 from .admin_forms import AdminBlogPostForm, AdminNFTForm, AdminUserForm
 from .models import Bid, BlogPost, NFTAsset, User
@@ -134,9 +135,8 @@ def post_edit(request, pk):
 
 
 @admin_required
+@require_POST
 def post_toggle_publish(request, pk):
-    if request.method != "POST":
-        raise PermissionDenied
     post = get_object_or_404(BlogPost, pk=pk)
     post.is_published = not post.is_published
     if post.is_published and not post.published_at:
@@ -216,9 +216,8 @@ def user_edit(request, pk):
 
 
 @admin_required
+@require_POST
 def user_toggle_active(request, pk):
-    if request.method != "POST":
-        raise PermissionDenied
     target = get_object_or_404(User, pk=pk)
     if target.pk == request.user.pk:
         messages.error(request, "Akun administrator yang sedang digunakan tidak dapat dinonaktifkan.")

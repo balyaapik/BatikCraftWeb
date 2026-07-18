@@ -24,8 +24,8 @@
 
     <div class="bob-auth-title">
       <span class="bob-eyebrow"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i>{% if ui_language == 'en' %}Secure access{% else %}Akses aman{% endif %}</span>
-      <h1 id="login-title">{% if ui_language == 'en' %}Login to BatikCraft{% else %}Masuk ke BatikCraft{% endif %}</h1>
-      <p>{% if ui_language == 'en' %}Continue creating and managing your digital batik ecosystem.{% else %}Lanjutkan berkarya dan kelola ekosistem batik digitalmu.{% endif %}</p>
+      <h1 id="login-title">{% t "login.login_to_batikcraft" %}</h1>
+      <p>{% t "login.continue_creating_and_managing_your_digita" %}</p>
     </div>
 
     <form method="post" class="bob-auth-form">
@@ -34,7 +34,7 @@
       {{ form.non_field_errors }}
 
       <div class="bob-field{% if form.username.errors %} has-error{% endif %}">
-        <label for="{{ form.username.id_for_label }}"><i class="fa-solid fa-user" aria-hidden="true"></i>{% if ui_language == 'en' %}Username or email{% else %}Username atau email{% endif %}</label>
+        <label for="{{ form.username.id_for_label }}"><i class="fa-solid fa-user" aria-hidden="true"></i>{% t "login.username_or_email" %}</label>
         {{ form.username }}{{ form.username.errors }}
       </div>
       <div class="bob-field{% if form.password.errors %} has-error{% endif %}">
@@ -46,9 +46,9 @@
       {% include 'registration/_bob_captcha.html' %}
       {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
 
-      <button class="btn btn-primary btn-block" type="submit"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>{% if ui_language == 'en' %}Login{% else %}Masuk{% endif %}</button>
-      <div class="bob-auth-tip"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> {% if ui_language == 'en' %}CAPTCHA protects your account from automated access.{% else %}CAPTCHA aktif untuk melindungi akun dari akses otomatis.{% endif %}</div>
-      <div class="bob-auth-foot"><span>{% t "auth.login.no_account" %} <a href="{% url 'register' %}">{% t "auth.login.register" %}</a></span><a href="{% url 'home' %}">← {% if ui_language == 'en' %}Homepage{% else %}Beranda{% endif %}</a></div>
+      <button class="btn btn-primary btn-block" type="submit"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>{% t "login.login" %}</button>
+      <div class="bob-auth-tip"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> {% t "login.captcha_protects_your_account_from_automat" %}</div>
+      <div class="bob-auth-foot"><span>{% t "auth.login.no_account" %} <a href="{% url 'register' %}">{% t "auth.login.register" %}</a></span><a href="{% url 'home' %}">← {% t "login.homepage" %}</a></div>
     </form>
   </div>
 </section>

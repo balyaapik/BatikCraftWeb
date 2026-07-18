@@ -1,4 +1,5 @@
+{% load ui_i18n %}
 <section class="newsletter">
-  <div><span class="eyebrow" style="color:#ffd7e2">Newsletter</span><h2>{% if ui_language == 'en' %}Join Our World{% else %}Bergabung dengan Dunia Kami{% endif %}</h2><p>{% if ui_language == 'en' %}Be the first to hear about new collections, exclusive releases, and BatikCraft stories.{% else %}Jadilah yang pertama mengetahui koleksi baru, rilis eksklusif, dan cerita BatikCraft.{% endif %}</p></div>
+  <div><span class="eyebrow" style="color:#ffd7e2">Newsletter</span><h2>{% t "newsletter.join_our_world" %}</h2><p>{% t "newsletter.be_the_first_to_hear_about_new_collections" %}</p></div>
   <form class="newsletter-form" onsubmit="return false"><input type="email" placeholder="Email address" aria-label="Email address"><button type="submit">Subscribe</button></form>
 </section>

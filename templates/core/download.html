@@ -4,21 +4,21 @@
 {% block content %}
 <section class="page-hero section-pad centered download-hero">
   <span class="eyebrow"><i class="fa-solid fa-download" aria-hidden="true"></i> BatikCraft Studio</span>
-  <h1>{% if ui_language == 'en' %}Download the studio<br><em>for your computer.</em>{% else %}Unduh studio<br><em>untuk komputermu.</em>{% endif %}</h1>
-  <p>{% if ui_language == 'en' %}Choose the installer that matches your operating system. Every button follows the newest published BatikCraft Studio release.{% else %}Pilih installer sesuai sistem operasi. Setiap tombol selalu mengikuti rilis BatikCraft Studio terbaru yang dipublikasikan.{% endif %}</p>
+  <h1>{% t "download.download_the_studio_for_your_computer" %}</h1>
+  <p>{% t "download.choose_the_installer_that_matches_your_ope" %}</p>
   <div class="hero-actions center">
-    <a class="btn btn-primary btn-lg" href="#platform-downloads"><i class="fa-solid fa-laptop" aria-hidden="true"></i> {% if ui_language == 'en' %}Choose Platform{% else %}Pilih Platform{% endif %}</a>
-    <a class="btn btn-light btn-lg" href="https://github.com/balyaapik/BatikCraftStudio/releases/latest"><i class="fa-brands fa-github" aria-hidden="true"></i> {% if ui_language == 'en' %}Latest Release{% else %}Rilis Terbaru{% endif %}</a>
+    <a class="btn btn-primary btn-lg" href="#platform-downloads"><i class="fa-solid fa-laptop" aria-hidden="true"></i> {% t "download.choose_platform" %}</a>
+    <a class="btn btn-light btn-lg" href="https://github.com/balyaapik/BatikCraftStudio/releases/latest"><i class="fa-brands fa-github" aria-hidden="true"></i> {% t "download.latest_release" %}</a>
   </div>
 </section>
 
 <section id="platform-downloads" class="section platform-download-section">
   <div class="section-head">
     <div>
-      <span class="eyebrow">{% if ui_language == 'en' %}Native installers{% else %}Installer native{% endif %}</span>
-      <h2>{% if ui_language == 'en' %}Choose your platform{% else %}Pilih platformmu{% endif %}</h2>
+      <span class="eyebrow">{% t "download.native_installers" %}</span>
+      <h2>{% t "download.choose_your_platform" %}</h2>
     </div>
-    <p>{% if ui_language == 'en' %}Windows, Linux, Intel Mac, and Apple Silicon Mac are provided as separate native packages.{% else %}Windows, Linux, Mac Intel, dan Mac Apple Silicon tersedia sebagai paket native terpisah.{% endif %}</p>
+    <p>{% t "download.windows_linux_intel_mac_and_apple_silicon" %}</p>
   </div>
 
   <div class="platform-download-grid">
@@ -26,7 +26,7 @@
       <div class="platform-icon"><i class="fa-brands fa-windows" aria-hidden="true"></i></div>
       <span class="platform-label">Windows</span>
       <h3>Windows x64</h3>
-      <p>{% if ui_language == 'en' %}Installer EXE for 64-bit Windows. Installs per user without administrator access.{% else %}Installer EXE untuk Windows 64-bit. Terpasang per pengguna tanpa akses administrator.{% endif %}</p>
+      <p>{% t "download.installer_exe_for_64_bit_windows_installs" %}</p>
       <a class="btn btn-primary btn-block" href="https://github.com/balyaapik/BatikCraftStudio/releases/latest/download/BatikCraftStudio-Setup-Windows-x64.exe"><i class="fa-solid fa-download" aria-hidden="true"></i> Download .EXE</a>
     </article>
 
@@ -34,7 +34,7 @@
       <div class="platform-icon"><i class="fa-brands fa-apple" aria-hidden="true"></i></div>
       <span class="platform-label">macOS</span>
       <h3>Mac Intel</h3>
-      <p>{% if ui_language == 'en' %}DMG installer for Intel-based Mac computers using the x64 architecture.{% else %}Installer DMG untuk komputer Mac berbasis Intel dengan arsitektur x64.{% endif %}</p>
+      <p>{% t "download.dmg_installer_for_intel_based_mac_computer" %}</p>
       <a class="btn btn-primary btn-block" href="https://github.com/balyaapik/BatikCraftStudio/releases/latest/download/BatikCraftStudio-Installer-macOS-x64.dmg"><i class="fa-solid fa-download" aria-hidden="true"></i> Download .DMG</a>
     </article>
 
@@ -42,7 +42,7 @@
       <div class="platform-icon"><i class="fa-brands fa-apple" aria-hidden="true"></i></div>
       <span class="platform-label">macOS</span>
       <h3>Mac Apple Silicon</h3>
-      <p>{% if ui_language == 'en' %}DMG installer for Apple Silicon devices, including M1, M2, M3, and newer chips.{% else %}Installer DMG untuk perangkat Apple Silicon, termasuk M1, M2, M3, dan generasi berikutnya.{% endif %}</p>
+      <p>{% t "download.dmg_installer_for_apple_silicon_devices_in" %}</p>
       <a class="btn btn-primary btn-block" href="https://github.com/balyaapik/BatikCraftStudio/releases/latest/download/BatikCraftStudio-Installer-macOS-arm64.dmg"><i class="fa-solid fa-download" aria-hidden="true"></i> Download .DMG</a>
     </article>
 
@@ -50,14 +50,14 @@
       <div class="platform-icon"><i class="fa-brands fa-linux" aria-hidden="true"></i></div>
       <span class="platform-label">Linux</span>
       <h3>Linux x64</h3>
-      <p>{% if ui_language == 'en' %}DEB installer built for 64-bit Ubuntu and Debian-compatible distributions.{% else %}Installer DEB untuk distribusi Ubuntu dan Debian-compatible 64-bit.{% endif %}</p>
+      <p>{% t "download.deb_installer_built_for_64_bit_ubuntu_and" %}</p>
       <a class="btn btn-primary btn-block" href="https://github.com/balyaapik/BatikCraftStudio/releases/latest/download/BatikCraftStudio-Installer-Linux-x64.deb"><i class="fa-solid fa-download" aria-hidden="true"></i> Download .DEB</a>
     </article>
   </div>
 
   <div class="release-note">
     <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-    <p>{% if ui_language == 'en' %}These links use GitHub's <strong>latest release</strong> endpoint, so they automatically follow the newest published installer with the same platform filename.{% else %}Tautan ini memakai endpoint <strong>latest release</strong> GitHub sehingga otomatis mengikuti installer terbaru dengan nama berkas platform yang sama.{% endif %} <a href="https://github.com/balyaapik/BatikCraftStudio/releases">{% if ui_language == 'en' %}View all releases{% else %}Lihat semua rilis{% endif %} →</a></p>
+    <p>{% t "download.these_links_use_github_s_latest_release_en" %} <a href="https://github.com/balyaapik/BatikCraftStudio/releases">{% t "download.view_all_releases" %} →</a></p>
   </div>
 </section>
 

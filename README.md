@@ -44,6 +44,16 @@ Dokumentasi lengkap berada di [`docs/API.md`](docs/API.md). Alur utama:
 
 Contoh client Python tersedia di [`docs/studio_client_example.py`](docs/studio_client_example.py).
 
+## Bahasa antarmuka
+
+Pilihan bahasa (ID/EN) disimpan di session sekaligus cookie
+`batikcraft_ui_language`. Cookie diperlukan karena Django menghapus session saat
+akun lain login, sehingga tanpa cookie pilihan bahasa akan kembali ke Indonesia
+setiap kali pengguna berganti akun atau logout.
+
+Seluruh teks antarmuka berada di `core/ui_language*.py` dan dipanggil dari
+template melalui tag `{% t "kunci" %}`.
+
 ## Validasi
 
 ```bash
@@ -54,10 +64,15 @@ ruff check .
 
 ## Deployment
 
-Salin `.env.example` menjadi `.env`, ganti secret key, matikan debug, isi hostname, lalu gunakan Docker:
+Salin `.env.example` menjadi `.env`, ganti secret key, matikan debug, isi hostname, lalu gunakan Docker.
+Aplikasi menolak start dengan `DJANGO_DEBUG=False` selama `DJANGO_SECRET_KEY` masih memakai nilai contoh.
+Dengan debug dimatikan, HSTS, `SECURE_SSL_REDIRECT`, dan cookie `Secure` aktif secara default:
 
 ```bash
 docker compose up --build
 ```
+
+File `.batikmodel` dialirkan melalui Django dan tidak pernah dilayani sebagai URL storage publik,
+sehingga hak akses pembeli tetap berlaku pada storage apa pun.
 
 Untuk production, gunakan PostgreSQL dan object storage (S3/R2) untuk media NFT. Model dan serializer saat ini telah memisahkan `image` dan `image_url`, sehingga migrasi storage dapat dilakukan tanpa mengubah kontrak API utama.

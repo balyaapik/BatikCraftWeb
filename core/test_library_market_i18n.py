@@ -139,9 +139,7 @@ class LibraryMarketAndLanguageTests(TestCase):
                     self.assertContains(response, f'<html lang="{language}">', html=False)
 
     def test_creator_and_buyer_dashboards_render_in_english(self):
-        session = self.client.session
-        session[LANGUAGE_SESSION_KEY] = "en"
-        session.save()
+        self.client.post(reverse("set_ui_language"), {"language": "en"})
 
         self.client.force_login(self.creator)
         creator_response = self.client.get(reverse("creator_dashboard"))
@@ -154,3 +152,41 @@ class LibraryMarketAndLanguageTests(TestCase):
         self.assertEqual(buyer_response.status_code, 200)
         self.assertContains(buyer_response, "Collect meaningful craft.")
         self.assertContains(buyer_response, "Explore library")
+
+
+class LanguagePersistenceTests(TestCase):
+    """The chosen language survives the session flush that login performs."""
+
+    def setUp(self):
+        self.first = User.objects.create_user(
+            username="lang_first",
+            password="strong-pass-2026",
+            role=User.Role.CREATOR,
+        )
+        self.second = User.objects.create_user(
+            username="lang_second",
+            password="strong-pass-2026",
+            role=User.Role.BUYER,
+        )
+
+    def test_language_survives_switching_accounts(self):
+        self.client.post(reverse("set_ui_language"), {"language": "en"})
+
+        self.client.force_login(self.first)
+        self.assertContains(
+            self.client.get(reverse("creator_dashboard")),
+            '<html lang="en">',
+        )
+
+        self.client.force_login(self.second)
+        self.assertContains(
+            self.client.get(reverse("buyer_dashboard")),
+            '<html lang="en">',
+        )
+
+    def test_language_survives_logout(self):
+        self.client.post(reverse("set_ui_language"), {"language": "en"})
+        self.client.force_login(self.first)
+        self.client.post(reverse("logout"))
+
+        self.assertContains(self.client.get(reverse("home")), '<html lang="en">')

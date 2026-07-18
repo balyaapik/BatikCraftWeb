@@ -1,0 +1,5 @@
+{% load ui_i18n %}
+<article class="product-card">
+  <a class="product-media" href="{% url 'model_detail' model.pk %}">{% if model.display_preview %}<img src="{{ model.display_preview }}" alt="{{ model.name }}">{% else %}<span class="product-placeholder">{{ model.base_model_family|upper }}</span>{% endif %}<span class="product-badge"><i class="fa-solid fa-brain"></i> {{ model.category }}</span></a>
+  <div class="product-body"><span class="product-author">{{ model.version }} · {{ model.seller.public_name }}</span><h3><a href="{% url 'model_detail' model.pk %}">{{ model.name }}</a></h3>{% if model.description %}<p>{{ model.description|truncatechars:105 }}</p>{% endif %}<div class="product-meta"><span>{{ model.get_license_type_display }}</span><span class="product-price">Rp{{ model.price|floatformat:0 }}</span></div></div>
+</article>

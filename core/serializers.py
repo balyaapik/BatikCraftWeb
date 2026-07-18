@@ -1,11 +1,51 @@
+import json
 from decimal import Decimal
 from pathlib import Path
 
 from django.db import transaction
 from django.db.models import Max
+from django.urls import reverse
 from rest_framework import serializers
 
 from .models import Bid, ModelAsset, ModelPurchase, NFTAsset, User
+
+
+class FormJSONField(serializers.JSONField):
+    """A JSON field that also accepts multipart form values.
+
+    ``multipart/form-data`` carries every value as a string, so a Studio
+    client that uploads a ``.batikmodel`` file alongside ``trigger_words``
+    cannot send a real JSON array. This field parses the string, and falls
+    back to a comma separated list when the payload is plain text.
+    """
+
+    def __init__(self, *args, expect_list: bool = False, **kwargs):
+        self.expect_list = expect_list
+        super().__init__(*args, **kwargs)
+
+    def to_internal_value(self, data):
+        if isinstance(data, str):
+            text = data.strip()
+            if not text:
+                data = [] if self.expect_list else {}
+            else:
+                try:
+                    data = json.loads(text)
+                except ValueError:
+                    if not self.expect_list:
+                        raise serializers.ValidationError(
+                            "Nilai harus berupa JSON yang valid."
+                        )
+                    data = [
+                        item.strip()
+                        for item in text.split(",")
+                        if item.strip()
+                    ]
+        if self.expect_list and not isinstance(data, list):
+            raise serializers.ValidationError("Nilai harus berupa daftar.")
+        if not self.expect_list and not isinstance(data, dict):
+            raise serializers.ValidationError("Nilai harus berupa objek JSON.")
+        return super().to_internal_value(data)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -87,6 +127,14 @@ class NFTAssetSerializer(serializers.ModelSerializer):
         source="owner.public_name",
         read_only=True,
     )
+    metadata = FormJSONField(required=False)
+    # The partial unique constraint on (owner, source_project_id) makes DRF
+    # mark this field required even though the model allows it to be blank.
+    source_project_id = serializers.CharField(
+        max_length=128,
+        required=False,
+        allow_blank=True,
+    )
     display_image = serializers.CharField(read_only=True)
     current_price = serializers.DecimalField(
         max_digits=18,
@@ -136,6 +184,7 @@ class NFTAssetSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, attrs):
+        self._validate_unique_source(attrs)
         starts = attrs.get(
             "auction_starts_at",
             getattr(self.instance, "auction_starts_at", None),
@@ -150,12 +199,48 @@ class NFTAssetSerializer(serializers.ModelSerializer):
             )
         return attrs
 
+    def _validate_unique_source(self, attrs):
+        source_id = attrs.get(
+            "source_project_id",
+            getattr(self.instance, "source_project_id", ""),
+        )
+        if not source_id:
+            return
+        request = self.context.get("request")
+        owner = getattr(self.instance, "owner", None) or getattr(
+            request, "user", None
+        )
+        if owner is None or not owner.is_authenticated:
+            return
+        duplicates = NFTAsset.objects.filter(
+            owner=owner,
+            source_project_id=source_id,
+        )
+        if self.instance is not None:
+            duplicates = duplicates.exclude(pk=self.instance.pk)
+        if duplicates.exists():
+            raise serializers.ValidationError(
+                {
+                    "source_project_id": (
+                        "Karya dengan source_project_id ini sudah ada di akunmu."
+                    )
+                }
+            )
+
 
 class ModelAssetSerializer(serializers.ModelSerializer):
     seller_name = serializers.CharField(
         source="seller.public_name",
         read_only=True,
     )
+    source_model_id = serializers.CharField(
+        max_length=160,
+        required=False,
+        allow_blank=True,
+    )
+    trigger_words = FormJSONField(expect_list=True, required=False)
+    capabilities = FormJSONField(expect_list=True, required=False)
+    metadata = FormJSONField(required=False)
     display_preview = serializers.CharField(read_only=True)
     sales_count = serializers.IntegerField(read_only=True)
     owned = serializers.SerializerMethodField()
@@ -213,6 +298,36 @@ class ModelAssetSerializer(serializers.ModelSerializer):
             buyer=request.user,
             status=ModelPurchase.Status.PAID,
         ).exists()
+
+    def validate(self, attrs):
+        source_id = attrs.get(
+            "source_model_id",
+            getattr(self.instance, "source_model_id", ""),
+        )
+        version = attrs.get("version", getattr(self.instance, "version", ""))
+        if source_id and version:
+            request = self.context.get("request")
+            seller = getattr(self.instance, "seller", None) or getattr(
+                request, "user", None
+            )
+            if seller is not None and seller.is_authenticated:
+                duplicates = ModelAsset.objects.filter(
+                    seller=seller,
+                    source_model_id=source_id,
+                    version=version,
+                )
+                if self.instance is not None:
+                    duplicates = duplicates.exclude(pk=self.instance.pk)
+                if duplicates.exists():
+                    raise serializers.ValidationError(
+                        {
+                            "source_model_id": (
+                                "Model dengan source_model_id dan versi ini "
+                                "sudah ada di akunmu."
+                            )
+                        }
+                    )
+        return attrs
 
     def validate_model_file(self, value):
         suffix = Path(value.name).suffix.casefold()
@@ -274,8 +389,7 @@ class ModelPurchaseSerializer(serializers.ModelSerializer):
 
     def get_download_url(self, obj):
         request = self.context.get("request")
+        path = reverse("api-model-download", args=[obj.model_id])
         if request is None:
-            return ""
-        return request.build_absolute_uri(
-            f"/api/v1/models/{obj.model_id}/download/"
-        )
+            return path
+        return request.build_absolute_uri(path)

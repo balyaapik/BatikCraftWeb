@@ -1,114 +1,24 @@
+"""Views that require an authenticated account.
+
+Pages that anonymous visitors can open live in ``public_views`` and the
+authentication flow lives in ``auth_views``.
+"""
+
 from decimal import Decimal
+from pathlib import Path
 
 from django.contrib import messages
-from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Count, Max, Q
-from django.http import HttpResponseBadRequest
+from django.db.models import Count, F, Max, Q
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from .decorators import role_required
-from .forms import (
-    BidForm,
-    ModelAssetForm,
-    NFTForm,
-    ProfileForm,
-    RegistrationForm,
-)
-from .models import BlogPost, Bid, ModelAsset, ModelPurchase, NFTAsset, User
-
-
-def home(request):
-    featured = (
-        NFTAsset.objects.filter(status=NFTAsset.Status.LISTED)
-        .select_related("owner")
-        .annotate(bid_count=Count("bids"), max_bid=Max("bids__amount"))[:6]
-    )
-    featured_models = (
-        ModelAsset.objects.filter(status=ModelAsset.Status.LISTED)
-        .select_related("seller")[:6]
-    )
-    posts = BlogPost.objects.filter(is_published=True)[:3]
-    return render(
-        request,
-        "core/home.html",
-        {
-            "featured": featured,
-            "featured_models": featured_models,
-            "posts": posts,
-        },
-    )
-
-
-def download_page(request):
-    return render(request, "core/download.html")
-
-
-def app_page(request):
-    return render(request, "core/app.html")
-
-
-def blog_list(request):
-    posts = BlogPost.objects.filter(is_published=True)
-    return render(request, "core/blog_list.html", {"posts": posts})
-
-
-def blog_detail(request, slug):
-    post = get_object_or_404(BlogPost, slug=slug, is_published=True)
-    return render(request, "core/blog_detail.html", {"post": post})
-
-
-def market(request):
-    items = (
-        NFTAsset.objects.filter(status=NFTAsset.Status.LISTED)
-        .select_related("owner")
-        .annotate(bid_count=Count("bids"), max_bid=Max("bids__amount"))
-    )
-    query = request.GET.get("q", "").strip()
-    if query:
-        items = items.filter(
-            Q(title__icontains=query)
-            | Q(description__icontains=query)
-            | Q(owner__display_name__icontains=query)
-        )
-    return render(
-        request,
-        "core/market.html",
-        {"items": items, "query": query},
-    )
-
-
-def model_market(request):
-    items = ModelAsset.objects.filter(
-        status=ModelAsset.Status.LISTED
-    ).select_related("seller")
-    query = request.GET.get("q", "").strip()
-    if query:
-        items = items.filter(
-            Q(name__icontains=query)
-            | Q(description__icontains=query)
-            | Q(category__icontains=query)
-            | Q(seller__display_name__icontains=query)
-        )
-    return render(
-        request,
-        "core/model_market.html",
-        {"items": items, "query": query},
-    )
-
-
-def register(request):
-    if request.user.is_authenticated:
-        return redirect("dashboard_router")
-    form = RegistrationForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        user = form.save()
-        login(request, user)
-        messages.success(request, "Akun berhasil dibuat.")
-        return redirect("dashboard_router")
-    return render(request, "registration/register.html", {"form": form})
+from .forms import BidForm, ModelAssetForm, NFTForm, ProfileForm
+from .models import Bid, ModelAsset, ModelPurchase, NFTAsset, User
 
 
 @login_required
@@ -127,14 +37,34 @@ def creator_dashboard(request):
         max_bid=Max("bids__amount"),
     )
     models = request.user.model_listings.annotate(
-        purchase_count=Count("purchases")
+        purchase_count=Count(
+            "purchases",
+            filter=Q(purchases__status=ModelPurchase.Status.PAID),
+        )
+    )
+    nft_totals = request.user.nfts.aggregate(
+        total=Count("id", distinct=True),
+        listed=Count(
+            "id",
+            filter=Q(status=NFTAsset.Status.LISTED),
+            distinct=True,
+        ),
+        total_bids=Count("bids", distinct=True),
+    )
+    model_totals = request.user.model_listings.aggregate(
+        total=Count("id", distinct=True),
+        sales=Count(
+            "purchases",
+            filter=Q(purchases__status=ModelPurchase.Status.PAID),
+            distinct=True,
+        ),
     )
     stats = {
-        "total": nfts.count(),
-        "listed": nfts.filter(status=NFTAsset.Status.LISTED).count(),
-        "total_bids": sum(n.bid_count for n in nfts),
-        "models": models.count(),
-        "model_sales": sum(model.purchase_count for model in models),
+        "total": nft_totals["total"],
+        "listed": nft_totals["listed"],
+        "total_bids": nft_totals["total_bids"],
+        "models": model_totals["total"],
+        "model_sales": model_totals["sales"],
     }
     return render(
         request,
@@ -196,9 +126,8 @@ def nft_create(request):
 
 
 @role_required(User.Role.CREATOR)
+@require_POST
 def nft_publish(request, pk):
-    if request.method != "POST":
-        return HttpResponseBadRequest("POST required")
     nft = get_object_or_404(NFTAsset, pk=pk, owner=request.user)
     if nft.starting_price <= Decimal("0"):
         messages.error(
@@ -219,27 +148,9 @@ def nft_publish(request, pk):
     return redirect("creator_dashboard")
 
 
-def nft_detail(request, pk):
-    nft = get_object_or_404(
-        NFTAsset.objects.select_related("owner"),
-        pk=pk,
-    )
-    bid_form = BidForm()
-    return render(
-        request,
-        "core/nft_detail.html",
-        {
-            "nft": nft,
-            "bid_form": bid_form,
-            "bids": nft.bids.select_related("bidder")[:20],
-        },
-    )
-
-
 @role_required(User.Role.BUYER)
+@require_POST
 def place_bid(request, pk):
-    if request.method != "POST":
-        return HttpResponseBadRequest("POST required")
     form = BidForm(request.POST)
     if not form.is_valid():
         messages.error(request, "Nominal bid tidak valid.")
@@ -294,9 +205,8 @@ def model_create(request):
 
 
 @role_required(User.Role.CREATOR)
+@require_POST
 def model_publish(request, pk):
-    if request.method != "POST":
-        return HttpResponseBadRequest("POST required")
     model = get_object_or_404(ModelAsset, pk=pk, seller=request.user)
     if not model.model_file:
         messages.error(request, "Unggah file .batikmodel terlebih dahulu.")
@@ -309,33 +219,9 @@ def model_publish(request, pk):
     return redirect("creator_dashboard")
 
 
-def model_detail(request, pk):
-    model = get_object_or_404(
-        ModelAsset.objects.select_related("seller"),
-        pk=pk,
-    )
-    owned = False
-    purchase = None
-    if request.user.is_authenticated:
-        owned = model.seller_id == request.user.id
-        if not owned:
-            purchase = ModelPurchase.objects.filter(
-                model=model,
-                buyer=request.user,
-                status=ModelPurchase.Status.PAID,
-            ).first()
-            owned = purchase is not None
-    return render(
-        request,
-        "core/model_detail.html",
-        {"model": model, "owned": owned, "purchase": purchase},
-    )
-
-
 @login_required
+@require_POST
 def model_purchase(request, pk):
-    if request.method != "POST":
-        return HttpResponseBadRequest("POST required")
     model = get_object_or_404(
         ModelAsset,
         pk=pk,
@@ -368,15 +254,26 @@ def model_purchase(request, pk):
 
 @login_required
 def model_download(request, pk):
+    """Stream a purchased model file without exposing the storage URL."""
+
     model = get_object_or_404(ModelAsset, pk=pk)
-    if model.seller_id == request.user.id or request.user.is_superuser:
-        return redirect(model.model_file.url)
-    purchase = get_object_or_404(
-        ModelPurchase,
-        model=model,
-        buyer=request.user,
-        status=ModelPurchase.Status.PAID,
+    is_owner = model.seller_id == request.user.id or request.user.is_superuser
+    purchase = None
+    if not is_owner:
+        purchase = get_object_or_404(
+            ModelPurchase,
+            model=model,
+            buyer=request.user,
+            status=ModelPurchase.Status.PAID,
+        )
+    if not model.model_file:
+        raise Http404("File model tidak tersedia.")
+    if purchase is not None:
+        ModelPurchase.objects.filter(pk=purchase.pk).update(
+            download_count=F("download_count") + 1
+        )
+    return FileResponse(
+        model.model_file.open("rb"),
+        as_attachment=True,
+        filename=Path(model.model_file.name).name,
     )
-    purchase.download_count += 1
-    purchase.save(update_fields=["download_count"])
-    return redirect(model.model_file.url)

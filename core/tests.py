@@ -42,7 +42,7 @@ class BatikCraftAPITests(APITestCase):
         self.assertContains(register, 'id="id_captcha"')
         self.assertContains(register, reverse("captcha_image"))
         self.assertEqual(login.status_code, 200)
-        self.assertContains(login, "Login BatikCraft")
+        self.assertContains(login, "Masuk ke BatikCraft")
         self.assertContains(login, 'id="id_captcha"')
 
     def test_captcha_image_is_svg_and_not_cacheable(self):

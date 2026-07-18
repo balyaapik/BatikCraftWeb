@@ -7,6 +7,8 @@ translating the product interface between Indonesian and English.
 from __future__ import annotations
 
 LANGUAGE_SESSION_KEY = "batikcraft_ui_language"
+LANGUAGE_COOKIE_KEY = "batikcraft_ui_language"
+LANGUAGE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 DEFAULT_LANGUAGE = "id"
 SUPPORTED_LANGUAGES = {
     "id": "Bahasa Indonesia",
@@ -311,8 +313,18 @@ def normalize_language(value: object) -> str:
 
 
 def get_request_language(request: object) -> str:
+    """Resolve the interface language from the session, then the cookie.
+
+    Logging in as a different user flushes the session, so the cookie keeps
+    the visitor's choice from silently resetting to Indonesian.
+    """
+
     session = getattr(request, "session", {})
-    return normalize_language(session.get(LANGUAGE_SESSION_KEY, DEFAULT_LANGUAGE))
+    chosen = session.get(LANGUAGE_SESSION_KEY)
+    if chosen is None:
+        cookies = getattr(request, "COOKIES", {}) or {}
+        chosen = cookies.get(LANGUAGE_COOKIE_KEY)
+    return normalize_language(chosen)
 
 
 def text(language: str, key: str) -> str:

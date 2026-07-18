@@ -1,4 +1,5 @@
 from decimal import Decimal
+from pathlib import Path
 
 from django.db import transaction
 from django.db.models import F, Q
@@ -6,6 +7,7 @@ from django.http import FileResponse
 from django.utils import timezone
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.authentication import TokenAuthentication
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -21,10 +23,16 @@ from .serializers import (
 )
 
 
+def _is_creator(user) -> bool:
+    """Creators and superusers may publish to the marketplaces."""
+
+    return bool(user.is_superuser or user.role == User.Role.CREATOR)
+
+
 class IsOwnerOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
         if getattr(view, "action", None) == "create":
-            return request.user.is_superuser or request.user.role == User.Role.CREATOR
+            return _is_creator(request.user)
         return True
 
     def has_object_permission(self, request, view, obj):
@@ -39,7 +47,7 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
 class IsModelSellerOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
         if getattr(view, "action", None) == "create":
-            return request.user.is_superuser or request.user.role == User.Role.CREATOR
+            return _is_creator(request.user)
         return True
 
     def has_object_permission(self, request, view, obj):
@@ -81,12 +89,7 @@ class NFTAssetViewSet(viewsets.ModelViewSet):
         return qs.filter(status=NFTAsset.Status.LISTED)
 
     def perform_create(self, serializer):
-        if (
-            self.request.user.role != User.Role.CREATOR
-            and not self.request.user.is_superuser
-        ):
-            from rest_framework.exceptions import PermissionDenied
-
+        if not _is_creator(self.request.user):
             raise PermissionDenied("Hanya creator yang dapat mengunggah NFT.")
         serializer.save(owner=self.request.user)
 
@@ -151,12 +154,7 @@ class ModelAssetViewSet(viewsets.ModelViewSet):
         )
 
     def perform_create(self, serializer):
-        if (
-            self.request.user.role != User.Role.CREATOR
-            and not self.request.user.is_superuser
-        ):
-            from rest_framework.exceptions import PermissionDenied
-
+        if not _is_creator(self.request.user):
             raise PermissionDenied("Hanya creator yang dapat menjual model.")
         serializer.save(seller=self.request.user)
 
@@ -240,10 +238,15 @@ class ModelAssetViewSet(viewsets.ModelViewSet):
             ModelPurchase.objects.filter(pk=purchase.pk).update(
                 download_count=F("download_count") + 1
             )
+        if not model.model_file:
+            return Response(
+                {"detail": "File model tidak tersedia."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
         response = FileResponse(
             model.model_file.open("rb"),
             as_attachment=True,
-            filename=model.model_file.name.rsplit("/", 1)[-1],
+            filename=Path(model.model_file.name).name,
         )
         response["X-BatikCraft-Model-ID"] = str(model.pk)
         response["X-BatikCraft-Model-Version"] = model.version

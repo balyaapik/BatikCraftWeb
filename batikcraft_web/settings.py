@@ -1,13 +1,31 @@
 from pathlib import Path
 import os
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
+
+def env_flag(name: str, default: str = "False") -> bool:
+    """Read a boolean environment variable without surprising truthiness."""
+
+    return os.getenv(name, default).strip().lower() in {"1", "true", "yes", "on"}
+
+
+INSECURE_SECRET_KEYS = {
+    "dev-only-batikcraft-secret-key",
+    "change-me-in-production",
+}
+
+DEBUG = env_flag("DJANGO_DEBUG", "True")
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-batikcraft-secret-key")
-DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() == "true"
+if not DEBUG and SECRET_KEY in INSECURE_SECRET_KEYS:
+    raise ImproperlyConfigured(
+        "DJANGO_SECRET_KEY masih memakai nilai contoh. "
+        "Buat kunci acak baru sebelum menjalankan dengan DJANGO_DEBUG=False."
+    )
 ALLOWED_HOSTS = [h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",") if h.strip()]
 CSRF_TRUSTED_ORIGINS = [h.strip() for h in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if h.strip()]
 
@@ -112,3 +130,29 @@ REST_FRAMEWORK = {
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
+X_FRAME_OPTIONS = "DENY"
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
+SECURE_SSL_REDIRECT = env_flag("DJANGO_SECURE_SSL_REDIRECT", str(not DEBUG))
+SECURE_HSTS_SECONDS = 0 if DEBUG else int(os.getenv("DJANGO_HSTS_SECONDS", "31536000"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
+SECURE_HSTS_PRELOAD = SECURE_HSTS_SECONDS > 0
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = int(
+    os.getenv("DJANGO_DATA_UPLOAD_MAX_MEMORY_SIZE", str(20 * 1024 * 1024))
+)
+FILE_UPLOAD_MAX_MEMORY_SIZE = DATA_UPLOAD_MAX_MEMORY_SIZE
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "root": {
+        "handlers": ["console"],
+        "level": os.getenv("DJANGO_LOG_LEVEL", "INFO"),
+    },
+}

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 
@@ -160,8 +162,10 @@ class ModelAssetForm(forms.ModelForm):
         }
 
     def clean_model_file(self):
-        value = self.cleaned_data["model_file"]
-        if not value.name.casefold().endswith(".batikmodel"):
+        value = self.cleaned_data.get("model_file")
+        if value is None:
+            return value
+        if not Path(value.name).suffix.casefold() == ".batikmodel":
             raise forms.ValidationError(
                 "File model harus memakai ekstensi .batikmodel."
             )

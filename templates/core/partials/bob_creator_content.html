@@ -2,7 +2,7 @@
 <aside class="bob-dash-nav">
   <span class="bob-eyebrow">{% t "dashboard.creator.workspace" %}</span><h2>{{ user.public_name }}</h2>
   <a class="active" href="{% url 'creator_dashboard' %}"><i class="fa-solid fa-layer-group"></i>{% t "dashboard.creator.collection" %}</a><a href="{% url 'library_market' %}"><i class="fa-solid fa-shapes"></i>{% t "nav.library_market" %}</a><a href="{% url 'profile_edit' %}"><i class="fa-solid fa-user-pen"></i>{% t "dashboard.profile" %}</a><a href="/api/v1/"><i class="fa-solid fa-code"></i>API</a>
-  <div class="bob-nav-bottom"><a href="{% url 'home' %}"><i class="fa-solid fa-arrow-up-right-from-square"></i>{% if ui_language == 'en' %}View website{% else %}Lihat website{% endif %}</a><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit"><i class="fa-solid fa-right-from-bracket"></i>{% t "nav.logout" %}</button></form></div>
+  <div class="bob-nav-bottom"><a href="{% url 'home' %}"><i class="fa-solid fa-arrow-up-right-from-square"></i>{% t "creator.view_website" %}</a><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit"><i class="fa-solid fa-right-from-bracket"></i>{% t "nav.logout" %}</button></form></div>
 </aside>
 <div class="bob-dash-main">
   <div class="bob-dashboard-head"><div><span class="bob-eyebrow">Dashboard</span><h1>{% t "dashboard.creator.archive" %}</h1></div><div class="bob-dashboard-actions"><a class="btn btn-ghost" href="{% url 'model_create' %}"><i class="fa-solid fa-brain"></i>{% t "dashboard.creator.sell_model" %}</a><a class="btn btn-primary" href="{% url 'nft_create' %}"><i class="fa-solid fa-plus"></i>{% t "dashboard.creator.add_nft" %}</a></div></div>

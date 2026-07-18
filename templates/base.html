@@ -18,7 +18,6 @@
   <link rel="stylesheet" href="{% static 'css/fullframe-overrides.css' %}">
   <link rel="stylesheet" href="{% static 'css/interface-refinements.css' %}">
   <link rel="stylesheet" href="{% static 'css/platform-downloads.css' %}">
-  <link rel="stylesheet" href="{% static 'css/auth-viewport.css' %}">
   {% block extra_head %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
@@ -46,22 +45,22 @@
           <div class="nav-dropdown-menu">
             <a class="{% if request.resolver_match.url_name == 'market' or request.resolver_match.url_name == 'nft_detail' %}active{% endif %}" href="{% url 'market' %}">
               <i class="fa-solid fa-gem" aria-hidden="true"></i>
-              <span><strong>{% t "nav.nft_market" %}</strong><small>{% if ui_language == 'en' %}Collect complete digital works{% else %}Koleksi karya digital utuh{% endif %}</small></span>
+              <span><strong>{% t "nav.nft_market" %}</strong><small>{% t "shell.collect_complete_digital_works" %}</small></span>
             </a>
             <a class="{% if request.resolver_match.url_name == 'library_market' %}active{% endif %}" href="{% url 'library_market' %}">
               <i class="fa-solid fa-shapes" aria-hidden="true"></i>
-              <span><strong>{% t "nav.library_market" %}</strong><small>{% if ui_language == 'en' %}Reusable motifs and ornaments{% else %}Motif dan ornamen siap pakai{% endif %}</small></span>
+              <span><strong>{% t "nav.library_market" %}</strong><small>{% t "shell.reusable_motifs_and_ornaments" %}</small></span>
             </a>
             <a class="{% if request.resolver_match.url_name == 'model_market' or request.resolver_match.url_name == 'model_detail' %}active{% endif %}" href="{% url 'model_market' %}">
               <i class="fa-solid fa-brain" aria-hidden="true"></i>
-              <span><strong>{% t "nav.model_market" %}</strong><small>{% if ui_language == 'en' %}Creator-trained AI models{% else %}Model AI hasil training kreator{% endif %}</small></span>
+              <span><strong>{% t "nav.model_market" %}</strong><small>{% t "shell.creator_trained_ai_models" %}</small></span>
             </a>
           </div>
         </details>
 
         <a class="{% if request.resolver_match.url_name == 'download' %}active{% endif %}" href="{% url 'download' %}">{% t "nav.download" %}</a>
         <a class="{% if request.resolver_match.url_name == 'app_page' %}active{% endif %}" href="{% url 'app_page' %}">App</a>
-        <a class="{% if request.resolver_match.url_name == 'documentation' %}active{% endif %}" href="{% url 'documentation' %}">{% if ui_language == 'en' %}Documentation{% else %}Dokumentasi{% endif %}</a>
+        <a class="{% if request.resolver_match.url_name == 'documentation' %}active{% endif %}" href="{% url 'documentation' %}">{% t "shell.documentation" %}</a>
       </nav>
 
       <div class="header-actions">
@@ -98,11 +97,11 @@
       <div class="footer-grid">
         <div class="footer-brand-copy">
           <div class="brand">BatikCraft</div>
-          <p>{% if ui_language == 'en' %}Crafting heritage into the digital future.{% else %}Membawa warisan menuju masa depan digital.{% endif %}</p>
+          <p>{% t "shell.crafting_heritage_into_the_digital_future" %}</p>
           <p class="footer-social"><i class="fa-brands fa-instagram"></i><i class="fa-brands fa-facebook"></i><i class="fa-brands fa-pinterest"></i><i class="fa-brands fa-tiktok"></i><i class="fa-brands fa-youtube"></i></p>
         </div>
         <div><h4>Explore</h4><a href="{% url 'market' %}">NFT Market</a><a href="{% url 'library_market' %}">Library Market</a><a href="{% url 'model_market' %}">Model Market</a></div>
-        <div><h4>Platform</h4><a href="{% url 'login' %}">Login</a><a href="{% url 'register' %}">Register</a><a href="{% url 'blog_list' %}">Journal</a><a href="{% url 'download' %}">Studio</a><a href="{% url 'documentation' %}">{% if ui_language == 'en' %}Documentation{% else %}Dokumentasi{% endif %}</a></div>
+        <div><h4>Platform</h4><a href="{% url 'login' %}">Login</a><a href="{% url 'register' %}">Register</a><a href="{% url 'blog_list' %}">Journal</a><a href="{% url 'download' %}">Studio</a><a href="{% url 'documentation' %}">{% t "shell.documentation" %}</a></div>
         <div><h4>Contact</h4><span>hello@batikcraft.id</span><span>Yogyakarta, Indonesia</span></div>
       </div>
       <div class="footer-bottom">© 2026 BatikCraft · Heritage Digital Studio</div>

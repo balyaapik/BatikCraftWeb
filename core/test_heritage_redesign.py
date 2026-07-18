@@ -56,13 +56,10 @@ class BobMockVisualTests(TestCase):
             html = response.content.decode("utf-8")
 
             self.assertEqual(response.status_code, 200)
-            self.assertIn(
-                'class="auth-page refined-auth auth-centered-page"', html
-            )
-            self.assertIn('class="auth-container auth-single-card', html)
-            self.assertIn('class="auth-card-header"', html)
-            self.assertIn('class="auth-panel"', html)
-            self.assertNotIn('class="auth-brand-panel"', html)
+            self.assertIn('class="bob-auth-wrap"', html)
+            self.assertIn("bob-auth-card", html)
+            self.assertIn('class="bob-auth-card-head"', html)
+            self.assertIn('class="bob-auth-form"', html)
             self.assertIn("HERITAGE DIGITAL STUDIO", html)
             self.assertLess(html.index('id="captcha-image"'), html.index('id="id_captcha"'))
 

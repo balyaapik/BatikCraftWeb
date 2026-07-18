@@ -5,32 +5,47 @@
 {% block content %}
 <section class="hero">
   <div class="hero-copy">
-    <span class="eyebrow">{% if ui_language == 'en' %}Batik · Technology · Ownership{% else %}Batik · Teknologi · Kepemilikan{% endif %}</span>
-    <h1>{% if ui_language == 'en' %}Heritage for<br><em>Everyone</em>{% else %}Warisan untuk<br><em>Semua Orang</em>{% endif %}</h1>
-    <p>{% if ui_language == 'en' %}Timeless batik and kebaya, reimagined for today's creative journey.{% else %}Batik dan kebaya abadi, dikreasikan ulang untuk perjalanan kreatif hari ini.{% endif %}</p>
-    <div class="hero-actions"><a class="btn btn-primary" href="{% url 'market' %}"><i class="fa-solid fa-gem"></i>{% if ui_language == 'en' %}Explore Collection{% else %}Jelajahi Koleksi{% endif %}</a><a class="btn btn-outline" href="{% url 'download' %}"><i class="fa-solid fa-download"></i>{% if ui_language == 'en' %}Download Studio{% else %}Unduh Studio{% endif %}</a></div>
+    <span class="eyebrow">{% t "home.batik_technology_ownership" %}</span>
+    <h1>{% t "home.heritage_for_everyone" %}</h1>
+    <p>{% t "home.timeless_batik_and_kebaya_reimagined_for_t" %}</p>
+    <div class="hero-actions"><a class="btn btn-primary" href="{% url 'market' %}"><i class="fa-solid fa-gem"></i>{% t "home.explore_collection" %}</a><a class="btn btn-outline" href="{% url 'download' %}"><i class="fa-solid fa-download"></i>{% t "home.download_studio" %}</a></div>
   </div>
-  <div class="hero-visual hero-birds-visual" role="img" aria-label="{% if ui_language == 'en' %}Batik bird and floral illustration{% else %}Ilustrasi burung dan bunga batik{% endif %}"><span class="hero-birds-asset" aria-hidden="true"></span></div>
+  <div class="hero-visual hero-birds-visual" role="img" aria-label="{% t "home.batik_bird_and_floral_illustration" %}"><span class="hero-birds-asset" aria-hidden="true"></span></div>
 </section>
 <div class="batik-divider"></div>
 <section class="section collection-section">
-  <div class="section-head"><div><span class="eyebrow">BatikCraft Marketplace</span><h2>{% if ui_language == 'en' %}Our Collection{% else %}Koleksi Kami{% endif %}</h2></div><p>{% if ui_language == 'en' %}Three marketplaces connected directly to BatikCraft Studio.{% else %}Tiga marketplace yang terhubung langsung dengan BatikCraft Studio.{% endif %}</p></div>
+  <div class="section-head"><div><span class="eyebrow">BatikCraft Marketplace</span><h2>{% t "home.our_collection" %}</h2></div><p>{% t "home.three_marketplaces_connected_directly_to_b" %}</p></div>
   <div class="collection-grid">
-    <a class="portal-card" href="{% url 'market' %}"><span class="number">01</span><i class="fa-solid fa-gavel fa-2x"></i><h3>NFT Market</h3><p>{% if ui_language == 'en' %}Digital batik works, auctions, bidding, and creative ownership.{% else %}Karya batik digital, lelang, bidding, dan kepemilikan kreatif.{% endif %}</p></a>
-    <a class="portal-card" href="{% url 'library_market' %}"><span class="number">02</span><i class="fa-solid fa-shapes fa-2x"></i><h3>Library Market</h3><p>{% if ui_language == 'en' %}Reusable ornaments, flora, fauna, and creator assets.{% else %}Ornamen, flora, fauna, dan aset siap pakai dari kreator.{% endif %}</p></a>
-    <a class="portal-card" href="{% url 'model_market' %}"><span class="number">03</span><i class="fa-solid fa-brain fa-2x"></i><h3>Model Market</h3><p>{% if ui_language == 'en' %}LoRA models and local AI packages for BatikCraft Studio.{% else %}Model LoRA dan paket AI lokal untuk memperkaya BatikCraft Studio.{% endif %}</p></a>
+    <a class="portal-card" href="{% url 'market' %}"><span class="number">01</span><i class="fa-solid fa-gavel fa-2x"></i><h3>NFT Market</h3><p>{% t "home.digital_batik_works_auctions_bidding_and_c" %}</p></a>
+    <a class="portal-card" href="{% url 'library_market' %}"><span class="number">02</span><i class="fa-solid fa-shapes fa-2x"></i><h3>Library Market</h3><p>{% t "home.reusable_ornaments_flora_fauna_and_creator" %}</p></a>
+    <a class="portal-card" href="{% url 'model_market' %}"><span class="number">03</span><i class="fa-solid fa-brain fa-2x"></i><h3>Model Market</h3><p>{% t "home.lora_models_and_local_ai_packages_for_bati" %}</p></a>
   </div>
 </section>
 <div class="batik-divider"></div>
 <section class="section">
+  <div class="section-head"><div><span class="eyebrow">{% t "home.nft.eyebrow" %}</span><h2>{% t "home.nft.title" %}</h2></div><a class="btn btn-outline" href="{% url 'market' %}">{% t "common.view_all" %}</a></div>
+  <div class="market-grid">{% for nft in featured %}{% include 'core/partials/nft_card.html' %}{% empty %}<div class="empty-state"><h3>{% t "home.empty.market.title" %}</h3><p>{% t "home.empty.market.body" %}</p></div>{% endfor %}</div>
+</section>
+<section class="section">
+  <div class="section-head"><div><span class="eyebrow">{% t "home.library.eyebrow" %}</span><h2>{% t "home.library.title" %}</h2></div><a class="btn btn-outline" href="{% url 'library_market' %}">{% t "common.view_all" %}</a></div>
+  <div class="market-grid">{% for nft in featured_library %}{% include 'core/partials/library_asset_card.html' %}{% empty %}<div class="empty-state"><h3>{% t "home.empty.library.title" %}</h3><p>{% t "home.empty.library.body" %}</p></div>{% endfor %}</div>
+</section>
+{% if featured_models %}
+<section class="section">
+  <div class="section-head"><div><span class="eyebrow">{% t "nav.model_market" %}</span><h2>{% t "market.model.available" %}</h2></div><a class="btn btn-outline" href="{% url 'model_market' %}">{% t "common.view_all" %}</a></div>
+  <div class="market-grid">{% for model in featured_models %}{% include 'core/partials/model_card.html' %}{% endfor %}</div>
+</section>
+{% endif %}
+<div class="batik-divider"></div>
+<section class="section">
   <div class="vendor-grid">
-    <div class="vendor-intro"><span class="eyebrow">Creative Community</span><h2>{% if ui_language == 'en' %}Meet Our Creators{% else %}Temui Kreator Kami{% endif %}</h2><p>{% if ui_language == 'en' %}A marketplace connecting artisans, digital artists, collectors, and AI developers.{% else %}Marketplace yang menghubungkan perajin, seniman digital, kolektor, dan pengembang AI.{% endif %}</p><a class="btn btn-outline" href="{% url 'register' %}">Become a Creator</a></div>
+    <div class="vendor-intro"><span class="eyebrow">Creative Community</span><h2>{% t "home.meet_our_creators" %}</h2><p>{% t "home.a_marketplace_connecting_artisans_digital" %}</p><a class="btn btn-outline" href="{% url 'register' %}">Become a Creator</a></div>
     {% for creator in creators %}<article class="vendor-card"><span class="vendor-art {% cycle 'cloud-small' 'flower' 'birds' %}"></span><h3>{{ creator.public_name }}</h3><p>{{ creator.bio|default:"BatikCraft Creator"|truncatechars:70 }}</p></article>{% empty %}<article class="vendor-card"><span class="vendor-art cloud-small"></span><h3>Sekar Studio</h3><p>Flora · Ornament</p></article><article class="vendor-card"><span class="vendor-art flower"></span><h3>Nusa Pattern Lab</h3><p>Pattern · Textile</p></article><article class="vendor-card"><span class="vendor-art birds"></span><h3>Wayang AI Works</h3><p>Wayang · Local LoRA</p></article>{% endfor %}
   </div>
 </section>
 <section class="section">
-  <div class="section-head"><div><span class="eyebrow">Editorial</span><h2>{% if ui_language == 'en' %}Latest News & Stories{% else %}Berita & Cerita Terbaru{% endif %}</h2></div><a class="btn btn-outline" href="{% url 'news' %}">View All</a></div>
-  {% with feature=posts|first %}<div class="editorial"><article class="feature-story{% if feature and feature.cover_url %} with-cover{% endif %}"{% if feature and feature.cover_url %} style="background-image:url('{{ feature.cover_url }}')"{% endif %}><span class="tag">Featured</span><h3>{% if feature %}{{ feature.title }}{% else %}{% if ui_language == 'en' %}A new generation of digital batik that respects its cultural roots.{% else %}Generasi baru batik digital yang tetap menghormati akar budaya.{% endif %}{% endif %}</h3><p>{% if feature %}{{ feature.excerpt }}{% else %}{% if ui_language == 'en' %}BatikCraft Studio, NFT marketplace, asset library, and local AI training work as one ecosystem.{% else %}BatikCraft Studio, marketplace NFT, pustaka aset, dan training AI lokal bekerja sebagai satu ekosistem.{% endif %}{% endif %}</p><a href="{% if feature %}{{ feature.get_absolute_url }}{% else %}{% url 'blog_list' %}{% endif %}">Read story →</a></article><div class="story-list">{% for post in posts|slice:"1:4" %}<article class="story-item"><div class="story-thumb"><i class="fa-solid fa-book-open"></i></div><div><span class="tag">BatikCraft</span><h4><a href="{{ post.get_absolute_url }}">{{ post.title }}</a></h4><p>{{ post.excerpt|truncatechars:95 }}</p></div></article>{% empty %}<article class="story-item"><div class="story-thumb"><i class="fa-solid fa-shirt"></i></div><div><span class="tag">Fashion</span><h4>From pattern to runway</h4><p>Alur kreatif digital untuk busana batik modern.</p></div></article><article class="story-item"><div class="story-thumb"><i class="fa-solid fa-brain"></i></div><div><span class="tag">Technology</span><h4>Local LoRA training</h4><p>Model personal dari set gambar milik kreator.</p></div></article><article class="story-item"><div class="story-thumb"><i class="fa-solid fa-wallet"></i></div><div><span class="tag">Market</span><h4>Digital ownership</h4><p>Marketplace karya, aset, dan model dalam satu akun.</p></div></article>{% endfor %}</div></div>{% endwith %}
+  <div class="section-head"><div><span class="eyebrow">Editorial</span><h2>{% t "home.latest_news_stories" %}</h2></div><a class="btn btn-outline" href="{% url 'news' %}">View All</a></div>
+  {% with feature=posts|first %}<div class="editorial"><article class="feature-story{% if feature and feature.cover_url %} with-cover{% endif %}"{% if feature and feature.cover_url %} style="background-image:url('{{ feature.cover_url }}')"{% endif %}><span class="tag">Featured</span><h3>{% if feature %}{{ feature.title }}{% else %}{% t "home.a_new_generation_of_digital_batik_that_res" %}{% endif %}</h3><p>{% if feature %}{{ feature.excerpt }}{% else %}{% t "home.batikcraft_studio_nft_marketplace_asset_li" %}{% endif %}</p><a href="{% if feature %}{{ feature.get_absolute_url }}{% else %}{% url 'blog_list' %}{% endif %}">Read story →</a></article><div class="story-list">{% for post in posts|slice:"1:4" %}<article class="story-item"><div class="story-thumb"><i class="fa-solid fa-book-open"></i></div><div><span class="tag">BatikCraft</span><h4><a href="{{ post.get_absolute_url }}">{{ post.title }}</a></h4><p>{{ post.excerpt|truncatechars:95 }}</p></div></article>{% empty %}<article class="story-item"><div class="story-thumb"><i class="fa-solid fa-shirt"></i></div><div><span class="tag">Fashion</span><h4>From pattern to runway</h4><p>Alur kreatif digital untuk busana batik modern.</p></div></article><article class="story-item"><div class="story-thumb"><i class="fa-solid fa-brain"></i></div><div><span class="tag">Technology</span><h4>Local LoRA training</h4><p>Model personal dari set gambar milik kreator.</p></div></article><article class="story-item"><div class="story-thumb"><i class="fa-solid fa-wallet"></i></div><div><span class="tag">Market</span><h4>Digital ownership</h4><p>Marketplace karya, aset, dan model dalam satu akun.</p></div></article>{% endfor %}</div></div>{% endwith %}
 </section>
 {% include 'core/partials/newsletter.html' %}
 {% endblock %}

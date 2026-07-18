@@ -1,8 +1,0 @@
-{% load ui_i18n %}
-{% for field in form %}{% if field.name != 'captcha' %}
-<div class="auth-field field{% if field.errors %} has-error{% endif %}">
-  <label for="{{ field.id_for_label }}">{% if field.name == 'username' %}<i class="fa-solid fa-user"></i> {% t "auth.field.username" %}{% elif field.name == 'email' %}<i class="fa-solid fa-envelope"></i> {% t "auth.field.email" %}{% elif field.name == 'display_name' %}<i class="fa-solid fa-signature"></i> {% t "auth.field.display_name" %}{% elif field.name == 'role' %}<i class="fa-solid fa-users"></i> {% t "auth.field.role" %}{% elif field.name == 'password' or field.name == 'password1' or field.name == 'password2' %}<i class="fa-solid fa-key"></i> {{ field.label }}{% else %}<i class="fa-solid fa-pen"></i> {{ field.label }}{% endif %}</label>
-  <div class="input-wrap">{{ field }}</div>
-  {% if field.help_text %}<span class="helptext">{{ field.help_text|safe }}</span>{% endif %}{{ field.errors }}
-</div>
-{% endif %}{% endfor %}

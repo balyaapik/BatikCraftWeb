@@ -24,8 +24,8 @@
 
     <div class="bob-auth-title">
       <span class="bob-eyebrow"><i class="fa-solid fa-user-plus" aria-hidden="true"></i>{% if ui_language == 'en' %}New membership{% else %}Keanggotaan baru{% endif %}</span>
-      <h1 id="register-title">{% if ui_language == 'en' %}Create a BatikCraft account{% else %}Buat akun BatikCraft{% endif %}</h1>
-      <p>{% if ui_language == 'en' %}One account for Studio, creator publishing, and collecting.{% else %}Satu akun untuk Studio, publikasi kreator, dan mengoleksi karya.{% endif %}</p>
+      <h1 id="register-title">{% t "register.create_a_batikcraft_account" %}</h1>
+      <p>{% t "register.one_account_for_studio_creator_publishing" %}</p>
     </div>
 
     <form method="post" class="bob-auth-form">
@@ -40,8 +40,8 @@
       </div>
 
       {% include 'registration/_bob_captcha.html' %}
-      <button class="btn btn-primary btn-block" type="submit"><i class="fa-solid fa-user-plus" aria-hidden="true"></i>{% if ui_language == 'en' %}Create Account{% else %}Buat Akun{% endif %}</button>
-      <div class="bob-auth-foot"><span>{% t "auth.register.have_account" %} <a href="{% url 'login' %}">{% t "auth.register.login" %}</a></span><a href="{% url 'home' %}">← {% if ui_language == 'en' %}Homepage{% else %}Beranda{% endif %}</a></div>
+      <button class="btn btn-primary btn-block" type="submit"><i class="fa-solid fa-user-plus" aria-hidden="true"></i>{% t "register.create_account" %}</button>
+      <div class="bob-auth-foot"><span>{% t "auth.register.have_account" %} <a href="{% url 'login' %}">{% t "auth.register.login" %}</a></span><a href="{% url 'home' %}">← {% t "register.homepage" %}</a></div>
     </form>
   </div>
 </section>

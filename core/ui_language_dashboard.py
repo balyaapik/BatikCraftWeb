@@ -2,7 +2,7 @@ DASHBOARD_TRANSLATIONS: dict[str, dict[str, str]] = {
     "id": {
         "dashboard.creator.title": "Dashboard Kreator — BatikCraft",
         "dashboard.creator.workspace": "Ruang Kerja Kreator",
-        "dashboard.creator.collection": "Koleksi & Model",
+        "dashboard.creator.collection": "Koleksi &amp; Model",
         "dashboard.profile": "Profil",
         "dashboard.creator.archive": "Arsip digital Anda.",
         "dashboard.creator.sell_model": "Jual Model",
@@ -68,7 +68,7 @@ DASHBOARD_TRANSLATIONS: dict[str, dict[str, str]] = {
     "en": {
         "dashboard.creator.title": "Creator Dashboard — BatikCraft",
         "dashboard.creator.workspace": "Creator Workspace",
-        "dashboard.creator.collection": "Collection & Models",
+        "dashboard.creator.collection": "Collection &amp; Models",
         "dashboard.profile": "Profile",
         "dashboard.creator.archive": "Your digital archive.",
         "dashboard.creator.sell_model": "Sell Model",

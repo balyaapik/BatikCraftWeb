@@ -6,19 +6,19 @@ from . import auth_views, public_views, views
 
 urlpatterns = [
     path("", public_views.home, name="home"),
-    path("download/", views.download_page, name="download"),
-    path("app/", views.app_page, name="app_page"),
+    path("download/", public_views.download_page, name="download"),
+    path("app/", public_views.app_page, name="app_page"),
     path(
         "documentation/",
         TemplateView.as_view(template_name="core/documentation.html"),
         name="documentation",
     ),
     path("market/", public_views.nft_market, name="market"),
-    path("market/<int:pk>/", views.nft_detail, name="nft_detail"),
+    path("market/<int:pk>/", public_views.nft_detail, name="nft_detail"),
     path("market/<int:pk>/bid/", views.place_bid, name="place_bid"),
     path("library/", public_views.library_market, name="library_market"),
-    path("models/", views.model_market, name="model_market"),
-    path("models/<int:pk>/", views.model_detail, name="model_detail"),
+    path("models/", public_views.model_market, name="model_market"),
+    path("models/<int:pk>/", public_views.model_detail, name="model_detail"),
     path(
         "models/<int:pk>/purchase/",
         views.model_purchase,
@@ -31,7 +31,7 @@ urlpatterns = [
     ),
     path("news/", public_views.news, name="news"),
     path("blog/", public_views.blog_list, name="blog_list"),
-    path("blog/<slug:slug>/", views.blog_detail, name="blog_detail"),
+    path("blog/<slug:slug>/", public_views.blog_detail, name="blog_detail"),
     path("language/", public_views.set_ui_language, name="set_ui_language"),
     path("captcha/image/", auth_views.captcha_image, name="captcha_image"),
     path("login/", auth_views.CaptchaLoginView.as_view(), name="login"),
