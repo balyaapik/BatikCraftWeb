@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load ui_i18n %}
+{% load static ui_i18n %}
 {% block title %}{% t "home.title" %}{% endblock %}
 {% block body_class %}bob-home{% endblock %}
 {% block content %}
@@ -10,7 +10,7 @@
     <p>{% if ui_language == 'en' %}Timeless batik and kebaya, reimagined for today's creative journey.{% else %}Batik dan kebaya abadi, dikreasikan ulang untuk perjalanan kreatif hari ini.{% endif %}</p>
     <div class="hero-actions"><a class="btn btn-primary" href="{% url 'market' %}"><i class="fa-solid fa-gem"></i>{% if ui_language == 'en' %}Explore Collection{% else %}Jelajahi Koleksi{% endif %}</a><a class="btn btn-outline" href="{% url 'download' %}"><i class="fa-solid fa-download"></i>{% if ui_language == 'en' %}Download Studio{% else %}Unduh Studio{% endif %}</a></div>
   </div>
-  <div class="hero-visual" aria-label="Ilustrasi warisan BatikCraft"><span class="bob-art cloud"></span><span class="bob-art flower"></span><span class="bob-art birds"></span></div>
+  <div class="hero-visual hero-birds-visual" role="img" aria-label="{% if ui_language == 'en' %}Batik bird and floral illustration{% else %}Ilustrasi burung dan bunga batik{% endif %}"><span class="hero-birds-asset" aria-hidden="true"></span></div>
 </section>
 <div class="batik-divider"></div>
 <section class="section collection-section">
