@@ -1,6 +1,6 @@
-{% load static ui_i18n %}
+{% load ui_i18n %}
 <header class="bob-site-header" id="workspace-header">
-  <a class="bob-site-brand" href="{% url 'home' %}"><img src="{% static 'img/batik-mark.svg' %}" alt=""><span><strong>BatikCraft</strong><small>HERITAGE DIGITAL STUDIO</small></span></a>
+  <a class="bob-site-brand" href="{% url 'home' %}"><span><strong>BatikCraft</strong><small>HERITAGE DIGITAL STUDIO</small></span></a>
   <button class="bob-mobile-toggle" type="button" aria-label="Buka menu" aria-expanded="false"><i class="fa-solid fa-bars"></i></button>
   <nav class="bob-site-nav" aria-label="Navigasi utama"><a href="{% url 'home' %}">{% t "nav.home" %}</a><a href="{% url 'blog_list' %}">{% t "nav.blog" %}</a><a href="{% url 'market' %}">Market</a><a href="{% url 'download' %}">{% t "nav.download" %}</a><a class="active" href="{% url dashboard_url_name %}">{% t "nav.dashboard" %}</a></nav>
   <div class="bob-site-account">

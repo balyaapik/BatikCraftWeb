@@ -107,3 +107,66 @@ class SharedPaletteTests(TestCase):
             with self.subTest(css=css[:40]):
                 self.assertIn("Cinzel Decorative", css)
                 self.assertIn("-.055em", css.replace("-0.055em", "-.055em"))
+
+
+class NavigationStructureTests(TestCase):
+    """Download owns a dropdown; Documentation lives inside it."""
+
+    def setUp(self):
+        self.header = (
+            self.client.get(reverse("home"))
+            .content.decode("utf-8")
+            .split('<nav class="nav"', 1)[1]
+            .split("</nav>", 1)[0]
+        )
+
+    def test_documentation_is_nested_under_download(self):
+        dropdown = self.header.split('<details class="nav-dropdown')[2]
+        dropdown = dropdown.split("</details>", 1)[0]
+
+        self.assertIn(reverse("download"), dropdown)
+        self.assertIn(reverse("documentation"), dropdown)
+
+    def test_documentation_is_not_a_top_level_entry(self):
+        menus = self.header.split('<div class="nav-dropdown-menu">')
+        top_level = menus[0] + "".join(part.split("</details>", 1)[1] for part in menus[1:])
+
+        self.assertNotIn(reverse("documentation"), top_level)
+
+    def test_app_follows_the_download_dropdown(self):
+        self.assertLess(
+            self.header.index(reverse("documentation")),
+            self.header.index(reverse("app_page")),
+        )
+
+
+class BrandMarkRemovalTests(TestCase):
+    """Every wordmark is text only, matching the public header."""
+
+    def test_no_template_references_the_retired_mark(self):
+        templates = Path(settings.BASE_DIR) / "templates"
+        offenders = [
+            path.relative_to(templates).as_posix()
+            for path in templates.rglob("*.html")
+            if "batik-mark" in path.read_text(encoding="utf-8")
+        ]
+
+        self.assertEqual(offenders, [])
+
+    def test_the_mark_file_is_gone(self):
+        self.assertFalse((Path(settings.BASE_DIR) / "static" / "img" / "batik-mark.svg").exists())
+
+    def test_auth_and_admin_still_show_the_wordmark(self):
+        admin = User.objects.create_superuser(
+            username="mark_admin",
+            password="strong-pass-2026",
+            email="mark@example.com",
+        )
+        login = self.client.get(reverse("login"))
+        self.assertContains(login, "BatikCraft")
+        self.assertContains(login, "HERITAGE DIGITAL STUDIO")
+
+        self.client.force_login(admin)
+        self.assertContains(
+            self.client.get(reverse("admin_dashboard:home")), "admin-brand"
+        )

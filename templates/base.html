@@ -58,9 +58,24 @@
           </div>
         </details>
 
-        <a class="{% if request.resolver_match.url_name == 'download' %}active{% endif %}" href="{% url 'download' %}">{% t "nav.download" %}</a>
+        <details class="nav-dropdown{% if request.resolver_match.url_name == 'download' or request.resolver_match.url_name == 'documentation' %} active{% endif %}">
+          <summary>
+            {% t "nav.download" %}
+            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+          </summary>
+          <div class="nav-dropdown-menu">
+            <a class="{% if request.resolver_match.url_name == 'download' %}active{% endif %}" href="{% url 'download' %}">
+              <i class="fa-solid fa-download" aria-hidden="true"></i>
+              <span><strong>{% t "nav.download_studio" %}</strong><small>{% t "nav.download_studio_note" %}</small></span>
+            </a>
+            <a class="{% if request.resolver_match.url_name == 'documentation' %}active{% endif %}" href="{% url 'documentation' %}">
+              <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+              <span><strong>{% t "shell.documentation" %}</strong><small>{% t "nav.documentation_note" %}</small></span>
+            </a>
+          </div>
+        </details>
+
         <a class="{% if request.resolver_match.url_name == 'app_page' %}active{% endif %}" href="{% url 'app_page' %}">App</a>
-        <a class="{% if request.resolver_match.url_name == 'documentation' %}active{% endif %}" href="{% url 'documentation' %}">{% t "shell.documentation" %}</a>
       </nav>
 
       <div class="header-actions">

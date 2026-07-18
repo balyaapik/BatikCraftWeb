@@ -27,9 +27,12 @@ class BobMockVisualTests(TestCase):
         self.assertContains(response, reverse("documentation"))
         self.assertContains(response, 'class="hero-birds-asset"')
         self.assertNotIn(reverse("news"), header)
-        self.assertLess(header.index(reverse("download")), header.index(reverse("app_page")))
+        # Documentation sits inside the Download dropdown, ahead of App.
         self.assertLess(
-            header.index(reverse("app_page")), header.index(reverse("documentation"))
+            header.index(reverse("download")), header.index(reverse("documentation"))
+        )
+        self.assertLess(
+            header.index(reverse("documentation")), header.index(reverse("app_page"))
         )
         self.assertNotIn('class="topbar"', html)
         self.assertNotIn("Gratis Akses · Koleksi Baru · Edisi Warisan 2026", html)

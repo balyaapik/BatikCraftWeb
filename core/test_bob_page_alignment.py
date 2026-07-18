@@ -11,7 +11,7 @@ class BobPageAlignmentTests(TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertContains(response, "bob-auth-card")
             self.assertContains(response, "bob-page-refinement.css")
-            self.assertContains(response, "batik-mark.svg")
+            self.assertContains(response, "bob-auth-brand")
             self.assertContains(response, 'id="captcha-image"')
             self.assertContains(response, 'id="id_captcha"')
 
@@ -51,6 +51,6 @@ class BobPageAlignmentTests(TestCase):
         response = self.client.get(reverse("admin_dashboard:home"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "bob-admin-page")
-        self.assertContains(response, "batik-mark.svg")
+        self.assertContains(response, "admin-brand")
         self.assertContains(response, "admin-stats-grid")
         self.assertContains(response, "admin-quick-grid")
