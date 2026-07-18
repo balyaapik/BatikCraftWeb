@@ -1,0 +1,74 @@
+/*
+ * Full-frame public layout.
+ *
+ * The BOB static mock originally used a centered shell over a pink page
+ * background. BatikCraftWeb is a real application, so the public surface
+ * should always occupy the complete browser viewport without an outer gutter.
+ */
+html,
+body {
+  width: 100%;
+  max-width: none;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--heritage-ivory, #fffaf0);
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100vh;
+}
+
+main,
+.site-announcement,
+.site-header,
+.heritage-footer {
+  width: 100%;
+  max-width: none;
+  margin-right: 0;
+  margin-left: 0;
+}
+
+/* Support the shell class from the supplied BOB mock without its pink frame. */
+.site-shell {
+  width: 100%;
+  max-width: none;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  background: var(--heritage-ivory, #fffaf0);
+  box-shadow: none;
+  overflow-x: hidden;
+}
+
+/* Public hero and content bands must meet both viewport edges. */
+.heritage-hero,
+.heritage-collection,
+.vendors-section,
+.editorial-section,
+.heritage-page-hero,
+.ornament-divider,
+.journal-showcase,
+.market-section,
+.library-market-page,
+.heritage-auth-page {
+  width: 100%;
+  max-width: none;
+  margin-right: 0;
+  margin-left: 0;
+}
+
+/* Prevent the authentication card from exposing a differently coloured page edge. */
+.heritage-auth-page {
+  min-height: calc(100vh - 116px);
+}
+
+@media (max-width: 680px) {
+  html,
+  body,
+  .site-shell {
+    width: 100%;
+    margin: 0;
+  }
+}
