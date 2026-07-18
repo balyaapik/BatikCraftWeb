@@ -1,25 +1,31 @@
-/* BOB mock alignment for authentication and role dashboards. */
+/* Authentication, role dashboards, and the admin area.
+
+   These pages replace the marketing header with a compact workspace header,
+   but they share one palette and one brand treatment with the public site.
+   The --bob-* names below are aliases of the site tokens defined in
+   fullframe-overrides.css and style.css, so the two halves of the interface
+   cannot drift apart again. */
 :root {
-  --bob-teal: #075c5c;
+  --bob-teal: var(--teal);
   --bob-teal-deep: #173f3d;
-  --bob-wine: #a72756;
-  --bob-coral: #d96f5f;
-  --bob-cream: #fff8ec;
-  --bob-paper: #fffdf8;
+  --bob-wine: var(--wine);
+  --bob-coral: var(--coral);
+  --bob-cream: var(--cream-2);
+  --bob-paper: var(--cream-2);
   --bob-sand: #eadfce;
-  --bob-sage: #8ea99c;
-  --bob-gold: #b8965b;
-  --bob-ink: #172521;
-  --bob-muted: #6f7f79;
+  --bob-sage: var(--sage);
+  --bob-gold: var(--gold);
+  --bob-ink: var(--ink);
+  --bob-muted: var(--muted);
   --bob-line: rgba(23, 37, 33, .12);
-  --bob-shadow: 0 24px 70px rgba(23, 37, 33, .13);
+  --bob-shadow: var(--shadow);
 }
 
 .bob-auth-page,
 .bob-workspace-page,
 .bob-admin-page {
   color: var(--bob-ink);
-  background: #f5f3ee;
+  background: var(--cream-2);
   font-family: "DM Sans", sans-serif;
 }
 
@@ -146,20 +152,24 @@
 .bob-auth-page .bob-auth-brand strong,
 .bob-workspace-page .bob-site-brand strong {
   color: var(--bob-teal);
-  font-family: "Cinzel Decorative", Georgia, serif;
-  font-size: 18px;
+  font-family: "Cinzel Decorative", "Playfair Display", serif;
+  font-size: clamp(1.38rem, 2vw, 1.82rem);
+  font-weight: 900;
+  letter-spacing: -0.055em;
 }
 
 .bob-auth-page .bob-auth-brand small,
 .bob-workspace-page .bob-site-brand small {
-  margin-top: 5px;
+  margin-top: 7px;
   color: var(--bob-wine);
-  font-size: 7px;
-  font-weight: 900;
-  letter-spacing: .22em;
+  font-family: "DM Sans", sans-serif;
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.27em;
 }
 
-.bob-auth-page .bob-lang-switch {
+/* Shared by the auth card, the workspace header, and the admin topbar. */
+.bob-lang-switch {
   display: inline-flex;
   padding: 3px;
   border: 1px solid var(--bob-line);
@@ -167,7 +177,7 @@
   background: #fff;
 }
 
-.bob-auth-page .bob-lang-switch button {
+.bob-lang-switch button {
   padding: 5px 8px;
   border: 0;
   border-radius: 7px;
@@ -177,7 +187,7 @@
   font-weight: 800;
 }
 
-.bob-auth-page .bob-lang-switch button.active {
+.bob-lang-switch button.active {
   background: var(--bob-teal);
   color: #fff;
 }
@@ -375,21 +385,21 @@
 
 /* Creator and buyer workspaces */
 .bob-workspace-page {
-  background: #f5f3ee;
+  background: var(--cream-2);
 }
 
 .bob-workspace-page .bob-site-header {
-  min-height: 76px;
+  min-height: 88px;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 28px;
-  padding: 12px clamp(20px, 4vw, 58px);
+  gap: clamp(24px, 3vw, 50px);
+  padding: 15px clamp(22px, 4vw, 64px);
   position: sticky;
   top: 0;
   z-index: 50;
-  border-bottom: 1px solid var(--bob-sand);
-  background: rgba(255, 255, 255, .96);
+  border-bottom: 1px solid #eadfce;
+  background: rgba(255, 255, 255, 0.98);
   box-shadow: 0 8px 26px rgba(23, 37, 33, .05);
 }
 
@@ -811,7 +821,7 @@
 
 /* Admin dashboard refinements */
 .bob-admin-page {
-  background: #f2f3ef;
+  background: var(--cream-2);
 }
 
 .bob-admin-page .admin-shell {

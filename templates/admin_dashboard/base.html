@@ -42,7 +42,8 @@
     <header class="admin-topbar">
       <button class="admin-mobile-toggle" type="button" aria-label="Buka menu" onclick="document.body.classList.toggle('admin-nav-open')"><i class="fa-solid fa-bars"></i></button>
       <div><span class="admin-kicker">BatikCraft Control Center</span><strong>{% block admin_heading %}Dashboard{% endblock %}</strong></div>
-      <div class="admin-account"><span class="admin-avatar">{{ request.user.public_name|slice:":1"|upper }}</span><span><strong>{{ request.user.public_name }}</strong><small>Administrator</small></span></div>
+      <div class="admin-account">
+        {% include 'core/partials/language_switcher.html' with variant='bob-lang-switch' %}<span class="admin-avatar">{{ request.user.public_name|slice:":1"|upper }}</span><span><strong>{{ request.user.public_name }}</strong><small>Administrator</small></span></div>
     </header>
     <div class="admin-content">{% block admin_content %}{% endblock %}</div>
   </section>

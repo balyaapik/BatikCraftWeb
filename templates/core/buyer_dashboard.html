@@ -5,8 +5,9 @@
 {% block site_header %}{% endblock %}{% block site_footer %}{% endblock %}
 {% block extra_head %}<link rel="stylesheet" href="{% static 'css/bob-page-refinement.css' %}">{% endblock %}
 {% block content %}
+{% t "role.buyer" as role_label %}
 <div class="bob-dashboard-page">
-  {% include 'core/partials/bob_workspace_header.html' with dashboard_url_name='buyer_dashboard' role_label='Buyer' %}
+  {% include 'core/partials/bob_workspace_header.html' with dashboard_url_name='buyer_dashboard' role_label=role_label %}
   <section class="bob-dashboard-shell">{% include 'core/partials/bob_buyer_content.html' %}</section>
 </div>
 <script src="{% static 'js/bob-workspace.js' %}"></script>

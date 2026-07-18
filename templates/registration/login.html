@@ -15,11 +15,7 @@
         <img src="{% static 'img/batik-mark.svg' %}" alt="" aria-hidden="true">
         <span class="bob-auth-brand-copy"><strong>BatikCraft</strong><small>HERITAGE DIGITAL STUDIO</small></span>
       </a>
-      <form class="bob-lang-switch" method="post" action="{% url 'set_ui_language' %}" aria-label="{% t 'language.label' %}">
-        {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
-        <button type="submit" name="language" value="id" class="{% if ui_language == 'id' %}active{% endif %}">ID</button>
-        <button type="submit" name="language" value="en" class="{% if ui_language == 'en' %}active{% endif %}">EN</button>
-      </form>
+      {% include 'core/partials/language_switcher.html' with variant='bob-lang-switch' %}
     </header>
 
     <div class="bob-auth-title">

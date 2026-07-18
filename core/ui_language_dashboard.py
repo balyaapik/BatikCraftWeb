@@ -1,5 +1,7 @@
 DASHBOARD_TRANSLATIONS: dict[str, dict[str, str]] = {
     "id": {
+        "role.creator": "Kreator",
+        "role.buyer": "Buyer",
         "dashboard.creator.title": "Dashboard Kreator — BatikCraft",
         "dashboard.creator.workspace": "Ruang Kerja Kreator",
         "dashboard.creator.collection": "Koleksi &amp; Model",
@@ -66,6 +68,8 @@ DASHBOARD_TRANSLATIONS: dict[str, dict[str, str]] = {
         "detail.library_asset": "Aset Pustaka",
     },
     "en": {
+        "role.creator": "Creator",
+        "role.buyer": "Buyer",
         "dashboard.creator.title": "Creator Dashboard — BatikCraft",
         "dashboard.creator.workspace": "Creator Workspace",
         "dashboard.creator.collection": "Collection &amp; Models",
