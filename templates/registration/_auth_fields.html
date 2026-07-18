@@ -1,44 +1,8 @@
 {% load ui_i18n %}
-{% for field in form %}
-  {% if field.name != "captcha" %}
-    <div class="auth-field{% if field.errors %} has-error{% endif %}">
-      <label for="{{ field.id_for_label }}">
-        {% if field.name == "username" %}
-          <i class="fa-solid fa-user" aria-hidden="true"></i>
-        {% elif field.name == "email" %}
-          <i class="fa-solid fa-envelope" aria-hidden="true"></i>
-        {% elif field.name == "display_name" %}
-          <i class="fa-solid fa-signature" aria-hidden="true"></i>
-        {% elif field.name == "role" %}
-          <i class="fa-solid fa-users" aria-hidden="true"></i>
-        {% elif field.name == "password" or field.name == "password1" or field.name == "password2" %}
-          <i class="fa-solid fa-lock" aria-hidden="true"></i>
-        {% else %}
-          <i class="fa-solid fa-pen" aria-hidden="true"></i>
-        {% endif %}
-        {% if field.name == "username" %}
-          <span>{% t "auth.field.username" %}</span>
-        {% elif field.name == "email" %}
-          <span>{% t "auth.field.email" %}</span>
-        {% elif field.name == "display_name" %}
-          <span>{% t "auth.field.display_name" %}</span>
-        {% elif field.name == "role" %}
-          <span>{% t "auth.field.role" %}</span>
-        {% elif field.name == "password" %}
-          <span>{% t "auth.field.password" %}</span>
-        {% elif field.name == "password1" %}
-          <span>{% t "auth.field.password1" %}</span>
-        {% elif field.name == "password2" %}
-          <span>{% t "auth.field.password2" %}</span>
-        {% else %}
-          <span>{{ field.label }}</span>
-        {% endif %}
-      </label>
-      {{ field }}
-      {% if field.help_text %}
-        <span class="helptext">{{ field.help_text|safe }}</span>
-      {% endif %}
-      {{ field.errors }}
-    </div>
-  {% endif %}
-{% endfor %}
+{% for field in form %}{% if field.name != 'captcha' %}
+<div class="auth-field field{% if field.errors %} has-error{% endif %}">
+  <label for="{{ field.id_for_label }}">{% if field.name == 'username' %}<i class="fa-solid fa-user"></i> {% t "auth.field.username" %}{% elif field.name == 'email' %}<i class="fa-solid fa-envelope"></i> {% t "auth.field.email" %}{% elif field.name == 'display_name' %}<i class="fa-solid fa-signature"></i> {% t "auth.field.display_name" %}{% elif field.name == 'role' %}<i class="fa-solid fa-users"></i> {% t "auth.field.role" %}{% elif field.name == 'password' or field.name == 'password1' or field.name == 'password2' %}<i class="fa-solid fa-key"></i> {{ field.label }}{% else %}<i class="fa-solid fa-pen"></i> {{ field.label }}{% endif %}</label>
+  <div class="input-wrap">{{ field }}</div>
+  {% if field.help_text %}<span class="helptext">{{ field.help_text|safe }}</span>{% endif %}{{ field.errors }}
+</div>
+{% endif %}{% endfor %}

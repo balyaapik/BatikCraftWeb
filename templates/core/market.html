@@ -1,23 +1,8 @@
-{% extends 'base.html' %}
-{% load ui_i18n %}
-{% block title %}{% t "market.nft.title" %}{% endblock %}
-{% block body_class %}heritage-market-page{% endblock %}
+{% extends 'base.html' %}{% load ui_i18n %}
+{% block title %}{% t "market.nft.title" %}{% endblock %}{% block body_class %}bob-market-page{% endblock %}
 {% block content %}
-<section class="heritage-page-hero">
-  <span class="heritage-kicker">{% t "market.nft.eyebrow" %}</span>
-  <h1>{% t "market.nft.line1" %}<br><em>{% t "market.nft.line2" %}</em></h1>
-  <p>{% if ui_language == 'en' %}Discover complete digital batik works, follow creator stories, and join transparent auctions.{% else %}Temukan karya batik digital utuh, ikuti cerita kreator, dan bergabung dalam lelang transparan.{% endif %}</p>
-  <form class="search-bar" role="search" method="get">
-    <input type="search" name="q" value="{{ query }}" placeholder="{% t 'market.nft.placeholder' %}">
-    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass"></i> {% t "common.search" %}</button>
-  </form>
-</section>
-<div class="ornament-divider" aria-hidden="true"></div>
-<section class="section-pad market-section">
-  <div class="section-heading"><div><span class="heritage-kicker">{% if ui_language == 'en' %}Curated collection{% else %}Koleksi terkurasi{% endif %}</span><h2>{% t "market.nft.live" %}</h2></div><span>{{ items|length }} {% t "common.works" %}</span></div>
-  <div class="nft-grid light-grid">
-    {% for nft in items %}{% include 'core/partials/nft_card.html' %}
-    {% empty %}<div class="empty-state"><h3>{% t "market.nft.empty.title" %}</h3><p>{% t "market.nft.empty.body" %}</p></div>{% endfor %}
-  </div>
-</section>
+<section class="page-hero"><span class="eyebrow"><i class="fa-solid fa-gem"></i> NFT Market</span><h1>{% if ui_language == 'en' %}Collect digital<br><em>heritage.</em>{% else %}Koleksi warisan<br><em>digital.</em>{% endif %}</h1><p>{% if ui_language == 'en' %}Discover complete batik artworks, transparent auctions, and creator-owned culture.{% else %}Temukan karya batik utuh, lelang transparan, dan budaya yang dimiliki kreator.{% endif %}</p><form class="searchbar" method="get"><input type="search" name="q" value="{{ query }}" placeholder="{% t 'market.nft.placeholder' %}"><button class="btn btn-primary" type="submit"><i class="fa-solid fa-search"></i> {% t "common.search" %}</button></form></section>
+<div class="batik-divider"></div>
+<section class="section"><div class="section-head"><div><span class="eyebrow">Curated Marketplace</span><h2>{% t "market.nft.live" %}</h2></div><p>{{ items|length }} {% t "common.works" %}</p></div><div class="market-grid">{% for nft in items %}{% include 'core/partials/nft_card.html' %}{% empty %}<div class="empty-state"><h3>{% t "market.nft.empty.title" %}</h3><p>{% t "market.nft.empty.body" %}</p></div>{% endfor %}</div></section>
+{% include 'core/partials/newsletter.html' %}
 {% endblock %}

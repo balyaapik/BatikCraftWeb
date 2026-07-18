@@ -1,23 +1,8 @@
-{% extends 'base.html' %}
-{% load ui_i18n %}
-{% block title %}{% t "market.library.title" %}{% endblock %}
-{% block body_class %}heritage-library-page{% endblock %}
+{% extends 'base.html' %}{% load ui_i18n %}
+{% block title %}{% t "market.library.title" %}{% endblock %}{% block body_class %}bob-library-page{% endblock %}
 {% block content %}
-<section class="heritage-page-hero">
-  <span class="heritage-kicker">{% t "market.library.eyebrow" %}</span>
-  <h1>{% t "market.library.line1" %}<br><em>{% t "market.library.line2" %}</em></h1>
-  <p>{% t "market.library.body" %}</p>
-  <form class="search-bar" role="search" method="get">
-    <input type="search" name="q" value="{{ query }}" placeholder="{% t 'market.library.placeholder' %}">
-    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass"></i> {% t "common.search" %}</button>
-  </form>
-</section>
-<div class="ornament-divider" aria-hidden="true"></div>
-<section class="section-pad market-section library-market-page">
-  <div class="section-heading"><div><span class="heritage-kicker">{% if ui_language == 'en' %}Reusable heritage{% else %}Warisan siap pakai{% endif %}</span><h2>{% t "market.library.available" %}</h2></div><span>{{ items|length }} {% t "common.works" %}</span></div>
-  <div class="nft-grid light-grid">
-    {% for nft in items %}{% include 'core/partials/library_asset_card.html' %}
-    {% empty %}<div class="empty-state library-empty"><i class="fa-solid fa-box-open"></i><h3>{% t "market.library.empty.title" %}</h3><p>{% t "market.library.empty.body" %}</p></div>{% endfor %}
-  </div>
-</section>
+<section class="page-hero"><span class="eyebrow"><i class="fa-solid fa-shapes"></i> Library Market</span><h1>{% if ui_language == 'en' %}Build with<br><em>heritage assets.</em>{% else %}Berkarya dengan<br><em>aset warisan.</em>{% endif %}</h1><p>{% t "market.library.body" %}</p><form class="searchbar" method="get"><input type="search" name="q" value="{{ query }}" placeholder="{% t 'market.library.placeholder' %}"><button class="btn btn-primary" type="submit"><i class="fa-solid fa-search"></i> {% t "common.search" %}</button></form></section>
+<div class="batik-divider"></div>
+<section class="section"><div class="section-head"><div><span class="eyebrow">Reusable Heritage</span><h2>{% t "market.library.available" %}</h2></div><p>{{ items|length }} {% t "common.works" %}</p></div><div class="market-grid">{% for nft in items %}{% include 'core/partials/library_asset_card.html' %}{% empty %}<div class="empty-state"><h3>{% t "market.library.empty.title" %}</h3><p>{% t "market.library.empty.body" %}</p></div>{% endfor %}</div></section>
+{% include 'core/partials/newsletter.html' %}
 {% endblock %}

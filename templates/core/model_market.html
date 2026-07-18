@@ -1,27 +1,8 @@
-{% extends 'base.html' %}
-{% load ui_i18n %}
-{% block title %}{% t "market.model.title" %}{% endblock %}
-{% block body_class %}heritage-model-page{% endblock %}
+{% extends 'base.html' %}{% load ui_i18n %}
+{% block title %}{% t "market.model.title" %}{% endblock %}{% block body_class %}bob-model-page{% endblock %}
 {% block content %}
-<section class="heritage-page-hero">
-  <span class="heritage-kicker">{% t "market.model.eyebrow" %}</span>
-  <h1>{% t "market.model.line1" %}<br><em>{% t "market.model.line2" %}</em></h1>
-  <p>{% t "market.model.body" %}</p>
-  <form class="search-bar" role="search" method="get">
-    <input type="search" name="q" value="{{ query }}" placeholder="{% t 'market.model.placeholder' %}">
-    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass"></i> {% t "common.search" %}</button>
-  </form>
-</section>
-<div class="ornament-divider" aria-hidden="true"></div>
-<section class="section-pad market-section">
-  <div class="section-heading"><div><span class="heritage-kicker">{% if ui_language == 'en' %}Creator-trained tools{% else %}Perangkat hasil training kreator{% endif %}</span><h2>{% t "market.model.available" %}</h2></div><span>{{ items|length }} {% t "common.models" %}</span></div>
-  <div class="nft-grid light-grid">
-    {% for model in items %}
-    <article class="nft-card">
-      <a href="{% url 'model_detail' model.pk %}" class="nft-image">{% if model.display_preview %}<img src="{{ model.display_preview }}" alt="{{ model.name }}">{% else %}<div class="image-placeholder"><i class="fa-solid fa-brain"></i> {{ model.base_model_family|upper }}</div>{% endif %}<span class="status-pill">{{ model.category }}</span></a>
-      <div class="nft-info"><span class="editorial-meta">{{ model.version }} · {{ model.base_model_family|upper }}</span><h3><a href="{% url 'model_detail' model.pk %}">{{ model.name }}</a></h3><p>{{ model.description|truncatechars:115 }}</p><div class="price-row"><span>{{ model.seller.public_name }}</span><strong>Rp{{ model.price|floatformat:0 }}</strong></div><div class="card-meta"><span>{{ model.get_license_type_display }}</span><a href="{% url 'model_detail' model.pk %}">{% if ui_language == 'en' %}View{% else %}Lihat{% endif %} →</a></div></div>
-    </article>
-    {% empty %}<div class="empty-state"><h3>{% t "market.model.empty.title" %}</h3><p>{% t "market.model.empty.body" %}</p></div>{% endfor %}
-  </div>
-</section>
+<section class="page-hero"><span class="eyebrow"><i class="fa-solid fa-brain"></i> Model Market</span><h1>{% if ui_language == 'en' %}Train, create,<br><em>and preserve.</em>{% else %}Latih, ciptakan,<br><em>dan lestarikan.</em>{% endif %}</h1><p>{% t "market.model.body" %}</p><form class="searchbar" method="get"><input type="search" name="q" value="{{ query }}" placeholder="{% t 'market.model.placeholder' %}"><button class="btn btn-primary" type="submit"><i class="fa-solid fa-search"></i> {% t "common.search" %}</button></form></section>
+<div class="batik-divider"></div>
+<section class="section"><div class="section-head"><div><span class="eyebrow">Creator-trained AI</span><h2>{% t "market.model.available" %}</h2></div><p>{{ items|length }} {% t "common.models" %}</p></div><div class="market-grid">{% for model in items %}<article class="product-card"><a class="product-media" href="{% url 'model_detail' model.pk %}">{% if model.display_preview %}<img src="{{ model.display_preview }}" alt="{{ model.name }}">{% else %}<span class="product-placeholder">{{ model.base_model_family|upper }}</span>{% endif %}<span class="product-badge"><i class="fa-solid fa-brain"></i> {{ model.category }}</span></a><div class="product-body"><span class="product-author">{{ model.version }} · {{ model.seller.public_name }}</span><h3><a href="{% url 'model_detail' model.pk %}">{{ model.name }}</a></h3><p>{{ model.description|truncatechars:105 }}</p><div class="product-meta"><span>{{ model.get_license_type_display }}</span><span class="product-price">Rp{{ model.price|floatformat:0 }}</span></div></div></article>{% empty %}<div class="empty-state"><h3>{% t "market.model.empty.title" %}</h3><p>{% t "market.model.empty.body" %}</p></div>{% endfor %}</div></section>
+{% include 'core/partials/newsletter.html' %}
 {% endblock %}

@@ -1,15 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}{{ post.title }} — BatikCraft{% endblock %}
-{% block body_class %}heritage-article-page{% endblock %}
+{% block title %}{{ post.title }} — BatikCraft{% endblock %}{% block body_class %}bob-article-page{% endblock %}
 {% block content %}
-<section class="heritage-page-hero">
-  <span class="heritage-kicker">BatikCraft Journal · {{ post.published_at|date:'d M Y' }}</span>
-  <h1>{{ post.title }}</h1>
-  <p>{{ post.excerpt }}</p>
-</section>
-<div class="ornament-divider" aria-hidden="true"></div>
-<article class="article section-pad">
-  {% if post.cover_url %}<img class="article-cover" src="{{ post.cover_url }}" alt="{{ post.title }}">{% endif %}
-  <div class="article-body">{{ post.content|linebreaks }}</div>
-</article>
+<section class="page-hero"><span class="eyebrow"><i class="fa-solid fa-book-open"></i> BatikCraft Journal · {{ post.published_at|date:'d M Y' }}</span><h1>{{ post.title }}</h1><p>{{ post.excerpt }}</p></section><div class="batik-divider"></div><section class="article-shell"><article>{% if post.cover_url %}<img class="article-cover" src="{{ post.cover_url }}" alt="{{ post.title }}">{% endif %}<div class="article-body">{{ post.content|linebreaks }}</div></article></section>{% include 'core/partials/newsletter.html' %}
 {% endblock %}
