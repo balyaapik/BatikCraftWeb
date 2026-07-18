@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% load ui_i18n %}
+{% block title %}{% if ui_language == 'en' %}Documentation{% else %}Dokumentasi{% endif %} · BatikCraft{% endblock %}
+{% block content %}
+<section class="page-hero section-pad centered documentation-hero">
+  <span class="eyebrow"><i class="fa-solid fa-book-open" aria-hidden="true"></i> BatikCraft Documentation</span>
+  <h1>{% if ui_language == 'en' %}Build, create, and connect<br><em>with clear guidance.</em>{% else %}Bangun, berkarya, dan terhubung<br><em>dengan panduan yang jelas.</em>{% endif %}</h1>
+  <p>{% if ui_language == 'en' %}Documentation for BatikCraft Studio, desktop installers, project formats, and the web API in one place.{% else %}Dokumentasi BatikCraft Studio, installer desktop, format proyek, dan API web dalam satu tempat.{% endif %}</p>
+</section>
+
+<section class="section documentation-section">
+  <div class="documentation-grid">
+    <article class="documentation-card">
+      <i class="fa-solid fa-desktop" aria-hidden="true"></i>
+      <span class="tag">Studio</span>
+      <h2>BatikCraft Studio</h2>
+      <p>{% if ui_language == 'en' %}Product overview, local setup, features, roadmap, and the desktop workflow.{% else %}Ringkasan produk, setup lokal, fitur, roadmap, dan alur kerja aplikasi desktop.{% endif %}</p>
+      <a href="https://github.com/balyaapik/BatikCraftStudio#readme">{% if ui_language == 'en' %}Open Studio guide{% else %}Buka panduan Studio{% endif %} →</a>
+    </article>
+
+    <article class="documentation-card">
+      <i class="fa-solid fa-box-open" aria-hidden="true"></i>
+      <span class="tag">Installer</span>
+      <h2>{% if ui_language == 'en' %}Desktop Builds{% else %}Build Desktop{% endif %}</h2>
+      <p>{% if ui_language == 'en' %}Installation details for Windows, Linux, Intel Mac, and Apple Silicon Mac.{% else %}Detail instalasi untuk Windows, Linux, Mac Intel, dan Mac Apple Silicon.{% endif %}</p>
+      <a href="https://github.com/balyaapik/BatikCraftStudio/blob/main/docs/DESKTOP_BUILDS.md">{% if ui_language == 'en' %}Read installer documentation{% else %}Baca dokumentasi installer{% endif %} →</a>
+    </article>
+
+    <article class="documentation-card">
+      <i class="fa-solid fa-file-code" aria-hidden="true"></i>
+      <span class="tag">Format</span>
+      <h2>{% if ui_language == 'en' %}Project Format{% else %}Format Proyek{% endif %}</h2>
+      <p>{% if ui_language == 'en' %}Understand the editable project structure, metadata, assets, and compatibility rules.{% else %}Pelajari struktur proyek editable, metadata, aset, dan aturan kompatibilitas.{% endif %}</p>
+      <a href="https://github.com/balyaapik/BatikCraftStudio/blob/main/docs/PROJECT_FORMAT.md">{% if ui_language == 'en' %}Read project specification{% else %}Baca spesifikasi proyek{% endif %} →</a>
+    </article>
+
+    <article class="documentation-card">
+      <i class="fa-solid fa-code" aria-hidden="true"></i>
+      <span class="tag">API</span>
+      <h2>BatikCraft Web API</h2>
+      <p>{% if ui_language == 'en' %}Authenticate Studio, upload works, publish NFTs, and submit bids through the REST API.{% else %}Autentikasi Studio, unggah karya, publish NFT, dan kirim bidding melalui REST API.{% endif %}</p>
+      <a href="https://github.com/balyaapik/BatikCraftWeb/blob/main/docs/API.md">{% if ui_language == 'en' %}Read API documentation{% else %}Baca dokumentasi API{% endif %} →</a>
+    </article>
+  </div>
+
+  <div class="documentation-cta">
+    <div>
+      <span class="eyebrow">BatikCraft Studio</span>
+      <h2>{% if ui_language == 'en' %}Ready to start creating?{% else %}Siap mulai berkarya?{% endif %}</h2>
+      <p>{% if ui_language == 'en' %}Download the latest native installer for your operating system.{% else %}Unduh installer native terbaru untuk sistem operasimu.{% endif %}</p>
+    </div>
+    <a class="btn btn-primary" href="{% url 'download' %}"><i class="fa-solid fa-download" aria-hidden="true"></i> {% if ui_language == 'en' %}Download Studio{% else %}Unduh Studio{% endif %}</a>
+  </div>
+</section>
+{% endblock %}
