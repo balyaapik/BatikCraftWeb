@@ -1,76 +1,13 @@
 {% extends 'base.html' %}
-{% load ui_i18n %}
+{% load static ui_i18n %}
 {% block title %}{% t "dashboard.creator.title" %}{% endblock %}
+{% block body_class %}bob-workspace-page{% endblock %}
+{% block site_header %}{% endblock %}{% block site_footer %}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/bob-page-refinement.css' %}">{% endblock %}
 {% block content %}
-<section class="dashboard-shell section-pad">
-  <aside class="dash-nav">
-    <span class="eyebrow">{% t "dashboard.creator.workspace" %}</span>
-    <h2>{{ user.public_name }}</h2>
-    <a class="active" href="{% url 'creator_dashboard' %}">{% t "dashboard.creator.collection" %}</a>
-    <a href="{% url 'library_market' %}">{% t "nav.library_market" %}</a>
-    <a href="{% url 'profile_edit' %}">{% t "dashboard.profile" %}</a>
-    <a href="/api/v1/">API</a>
-  </aside>
-  <div class="dash-main">
-    <div class="dashboard-head">
-      <div><span class="eyebrow">Dashboard</span><h1>{% t "dashboard.creator.archive" %}</h1></div>
-      <div>
-        <a class="btn btn-ghost" href="{% url 'model_create' %}"><i class="fa-solid fa-brain" aria-hidden="true"></i> {% t "dashboard.creator.sell_model" %}</a>
-        <a class="btn btn-primary" href="{% url 'nft_create' %}"><i class="fa-solid fa-plus" aria-hidden="true"></i> {% t "dashboard.creator.add_nft" %}</a>
-      </div>
-    </div>
-    <div class="stats-grid">
-      <div><span>{% t "dashboard.creator.total_works" %}</span><strong>{{ stats.total }}</strong></div>
-      <div><span>{% t "dashboard.creator.live_nft" %}</span><strong>{{ stats.listed }}</strong></div>
-      <div><span>{% t "dashboard.creator.total_bids" %}</span><strong>{{ stats.total_bids }}</strong></div>
-      <div><span>Model</span><strong>{{ stats.models }}</strong></div>
-      <div><span>{% t "dashboard.creator.model_sales" %}</span><strong>{{ stats.model_sales }}</strong></div>
-    </div>
-
-    <div class="table-card">
-      <div class="table-head"><h2>{% t "dashboard.creator.nft_from_studio" %}</h2><span>{{ nfts|length }} item</span></div>
-      <div class="responsive-table">
-        <table>
-          <thead><tr><th>{% t "dashboard.table.work" %}</th><th>{% t "dashboard.table.status" %}</th><th>{% t "dashboard.table.price_bid" %}</th><th>{% t "dashboard.table.project_id" %}</th><th>{% t "dashboard.table.action" %}</th></tr></thead>
-          <tbody>
-          {% for nft in nfts %}
-            <tr>
-              <td><div class="work-cell">{% if nft.display_image %}<img src="{{ nft.display_image }}" alt="">{% endif %}<div><strong>{{ nft.title }}</strong><span>{{ nft.created_at|date:'d M Y' }}{% if nft.metadata.source_type == 'library_asset' %} · {% t "detail.library_asset" %}{% endif %}</span></div></div></td>
-              <td><span class="status {{ nft.status }}">{{ nft.get_status_display }}</span></td>
-              <td>Rp{% if nft.max_bid %}{{ nft.max_bid|floatformat:0 }}{% else %}{{ nft.starting_price|floatformat:0 }}{% endif %}<small>{{ nft.bid_count }} {% t "market.common.bids" %}</small></td>
-              <td><code>{{ nft.source_project_id|default:'manual' }}</code></td>
-              <td><a href="{% url 'nft_detail' nft.pk %}">{% t "dashboard.view" %}</a>{% if nft.status == 'draft' %}<form method="post" action="{% url 'nft_publish' nft.pk %}">{% csrf_token %}<button class="link-button">{% t "dashboard.publish" %}</button></form>{% endif %}</td>
-            </tr>
-          {% empty %}
-            <tr><td colspan="5"><div class="empty-state"><h3>{% t "dashboard.creator.empty_work" %}</h3><p>{% t "dashboard.creator.empty_work_body" %}</p></div></td></tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="table-card">
-      <div class="table-head"><h2>Model BatikCraft</h2><span>{{ models|length }} item</span></div>
-      <div class="responsive-table">
-        <table>
-          <thead><tr><th>Model</th><th>{% t "dashboard.table.base" %}</th><th>{% t "dashboard.table.version" %}</th><th>{% t "dashboard.table.price" %}</th><th>{% t "dashboard.table.sales" %}</th><th>{% t "dashboard.table.action" %}</th></tr></thead>
-          <tbody>
-          {% for model in models %}
-            <tr>
-              <td><strong>{{ model.name }}</strong><small>{{ model.category }}</small></td>
-              <td>{{ model.base_model_family }}</td>
-              <td>{{ model.version }}</td>
-              <td>Rp{{ model.price|floatformat:0 }}</td>
-              <td>{{ model.purchase_count }}</td>
-              <td><a href="{% url 'model_detail' model.pk %}">{% t "dashboard.view" %}</a>{% if model.status == 'draft' %}<form method="post" action="{% url 'model_publish' model.pk %}">{% csrf_token %}<button class="link-button">{% t "dashboard.publish" %}</button></form>{% endif %}</td>
-            </tr>
-          {% empty %}
-            <tr><td colspan="6">{% t "dashboard.creator.empty_model" %}</td></tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</section>
+<div class="bob-dashboard-page">
+  {% include 'core/partials/bob_workspace_header.html' with dashboard_url_name='creator_dashboard' role_label='Kreator' %}
+  <section class="bob-dashboard-shell">{% include 'core/partials/bob_creator_content.html' %}</section>
+</div>
+<script src="{% static 'js/bob-workspace.js' %}"></script>
 {% endblock %}
