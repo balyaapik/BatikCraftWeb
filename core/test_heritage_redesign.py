@@ -8,6 +8,9 @@ class BobMockVisualTests(TestCase):
     def test_home_uses_refined_header_without_promotional_topbar(self):
         response = self.client.get(reverse("home"))
         html = response.content.decode("utf-8")
+        header = html.split('<header class="header header-refined"', 1)[1].split(
+            "</header>", 1
+        )[0]
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'class="site-shell"')
@@ -21,6 +24,13 @@ class BobMockVisualTests(TestCase):
         self.assertContains(response, reverse("model_market"))
         self.assertContains(response, reverse("download"))
         self.assertContains(response, reverse("app_page"))
+        self.assertContains(response, reverse("documentation"))
+        self.assertContains(response, 'class="hero-birds-asset"')
+        self.assertNotIn(reverse("news"), header)
+        self.assertLess(header.index(reverse("download")), header.index(reverse("app_page")))
+        self.assertLess(
+            header.index(reverse("app_page")), header.index(reverse("documentation"))
+        )
         self.assertNotIn('class="topbar"', html)
         self.assertNotIn("Gratis Akses · Koleksi Baru · Edisi Warisan 2026", html)
 
@@ -40,21 +50,50 @@ class BobMockVisualTests(TestCase):
         self.assertContains(blog, 'class="blog-grid"')
         self.assertContains(blog, 'class="blog-card"')
 
-    def test_auth_uses_the_refined_card_and_real_captcha(self):
+    def test_auth_uses_centered_responsive_card_and_real_captcha(self):
         for name in ("login", "register"):
             response = self.client.get(reverse(name))
             html = response.content.decode("utf-8")
 
             self.assertEqual(response.status_code, 200)
-            self.assertIn('class="auth-page refined-auth"', html)
-            self.assertIn('class="auth-container', html)
-            self.assertIn('class="auth-brand-panel"', html)
+            self.assertIn(
+                'class="auth-page refined-auth auth-centered-page"', html
+            )
+            self.assertIn('class="auth-container auth-single-card', html)
+            self.assertIn('class="auth-card-header"', html)
             self.assertIn('class="auth-panel"', html)
+            self.assertNotIn('class="auth-brand-panel"', html)
             self.assertIn("HERITAGE DIGITAL STUDIO", html)
             self.assertLess(html.index('id="captcha-image"'), html.index('id="id_captcha"'))
 
         login_html = self.client.get(reverse("login")).content.decode("utf-8")
-        self.assertLess(login_html.index('id="id_password"'), login_html.index('id="captcha-image"'))
+        self.assertLess(
+            login_html.index('id="id_password"'), login_html.index('id="captcha-image"')
+        )
+
+    def test_download_page_links_all_native_platforms_to_latest_release(self):
+        response = self.client.get(reverse("download"))
+        html = response.content.decode("utf-8")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="platform-download-grid"')
+        self.assertIn("releases/latest/download", html)
+        for filename in (
+            "BatikCraftStudio-Setup-Windows-x64.exe",
+            "BatikCraftStudio-Installer-Linux-x64.deb",
+            "BatikCraftStudio-Installer-macOS-x64.dmg",
+            "BatikCraftStudio-Installer-macOS-arm64.dmg",
+        ):
+            self.assertIn(filename, html)
+
+    def test_documentation_page_is_public_and_linked(self):
+        response = self.client.get(reverse("documentation"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="documentation-grid"')
+        self.assertContains(response, "DESKTOP_BUILDS.md")
+        self.assertContains(response, "PROJECT_FORMAT.md")
+        self.assertContains(response, "docs/API.md")
 
     def test_market_pages_use_product_card_grid(self):
         for name in ("market", "library_market", "model_market"):
