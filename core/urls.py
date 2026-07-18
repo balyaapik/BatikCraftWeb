@@ -1,5 +1,6 @@
 from django.contrib.auth import views as django_auth_views
 from django.urls import include, path
+from django.views.generic import TemplateView
 
 from . import auth_views, public_views, views
 
@@ -7,6 +8,11 @@ urlpatterns = [
     path("", public_views.home, name="home"),
     path("download/", views.download_page, name="download"),
     path("app/", views.app_page, name="app_page"),
+    path(
+        "documentation/",
+        TemplateView.as_view(template_name="core/documentation.html"),
+        name="documentation",
+    ),
     path("market/", public_views.nft_market, name="market"),
     path("market/<int:pk>/", views.nft_detail, name="nft_detail"),
     path("market/<int:pk>/bid/", views.place_bid, name="place_bid"),
