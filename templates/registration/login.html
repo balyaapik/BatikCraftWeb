@@ -1,6 +1,67 @@
-{% extends 'base.html' %}{% load ui_i18n %}
-{% block title %}{% t "auth.login.title" %}{% endblock %}{% block body_class %}bob-auth-page{% endblock %}
-{% block site_header %}{% endblock %}{% block site_footer %}{% endblock %}
+{% extends 'base.html' %}
+{% load ui_i18n %}
+
+{% block title %}{% t "auth.login.title" %}{% endblock %}
+{% block body_class %}bob-auth-page{% endblock %}
+{% block site_header %}{% endblock %}
+{% block site_footer %}{% endblock %}
+
 {% block content %}
-<section class="auth-page"><div class="auth-card"><div class="auth-copy"><span class="bob-art cloud-art"></span><span class="eyebrow">BatikCraft Account</span><h1>{% if ui_language == 'en' %}Login<br>Account{% else %}Masuk<br>Akun{% endif %}</h1><p>{% if ui_language == 'en' %}Welcome back to your connected creative ecosystem.{% else %}Selamat datang kembali di ekosistem kreatifmu yang saling terhubung.{% endif %}</p><span class="bob-art birds-art"></span></div><div class="auth-form"><form class="lang auth-lang" method="post" action="{% url 'set_ui_language' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button name="language" value="id" class="language-option{% if ui_language == 'id' %} active{% endif %}">ID</button><button name="language" value="en" class="language-option{% if ui_language == 'en' %} active{% endif %}">EN</button></form><form method="post" class="auth-fields-form">{% csrf_token %}<h2>Login BatikCraft</h2>{% if form.errors %}<div class="form-errors">{% t "auth.login.error" %}</div>{% endif %}{{ form.non_field_errors }}{% include 'registration/_auth_fields.html' %}{% include 'registration/_captcha.html' %}{% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}<button class="btn btn-primary btn-block" type="submit"><i class="fa-solid fa-right-to-bracket"></i> LOGIN</button><p class="form-foot">{% t "auth.login.no_account" %} <a href="{% url 'register' %}">{% t "auth.login.register" %}</a></p><p class="auth-back"><a href="{% url 'home' %}">← Back to homepage</a></p></form></div></div></section>
+<section class="auth-page refined-auth">
+  <div class="auth-container">
+    <aside class="auth-brand-panel">
+      <a class="auth-brand-lockup" href="{% url 'home' %}" aria-label="BatikCraft home">
+        <strong>BatikCraft</strong>
+        <small>HERITAGE DIGITAL STUDIO</small>
+      </a>
+
+      <div class="auth-brand-content">
+        <span class="eyebrow"><i class="fa-solid fa-sparkles" aria-hidden="true"></i> BatikCraft Account</span>
+        <h1>{% if ui_language == 'en' %}Welcome<br>Back{% else %}Selamat<br>Kembali{% endif %}</h1>
+        <p>{% if ui_language == 'en' %}Continue creating, collecting, and managing your digital batik ecosystem from one secure account.{% else %}Lanjutkan berkarya, mengoleksi, dan mengelola ekosistem batik digitalmu melalui satu akun yang aman.{% endif %}</p>
+        <ul class="auth-benefits">
+          <li><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> BatikCraft Studio</li>
+          <li><i class="fa-solid fa-store" aria-hidden="true"></i> {% if ui_language == 'en' %}Three connected markets{% else %}Tiga market terhubung{% endif %}</li>
+          <li><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> {% if ui_language == 'en' %}Protected account access{% else %}Akses akun terlindungi{% endif %}</li>
+        </ul>
+      </div>
+    </aside>
+
+    <div class="auth-panel">
+      <div class="auth-panel-toolbar">
+        <form class="lang auth-lang" method="post" action="{% url 'set_ui_language' %}" aria-label="{% t 'language.label' %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button type="submit" name="language" value="id" class="language-option{% if ui_language == 'id' %} active{% endif %}">ID</button>
+          <button type="submit" name="language" value="en" class="language-option{% if ui_language == 'en' %} active{% endif %}">EN</button>
+        </form>
+      </div>
+
+      <form method="post" class="auth-fields-form">
+        {% csrf_token %}
+        <div class="auth-title-block">
+          <span class="auth-kicker">{% if ui_language == 'en' %}Secure access{% else %}Akses aman{% endif %}</span>
+          <h2>{% if ui_language == 'en' %}Login to BatikCraft{% else %}Masuk ke BatikCraft{% endif %}</h2>
+          <p>{% if ui_language == 'en' %}Enter your account details to continue.{% else %}Masukkan data akun untuk melanjutkan.{% endif %}</p>
+        </div>
+
+        {% if form.errors %}<div class="form-errors">{% t "auth.login.error" %}</div>{% endif %}
+        {{ form.non_field_errors }}
+        {% include 'registration/_auth_fields.html' %}
+        {% include 'registration/_captcha.html' %}
+        {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+
+        <button class="btn btn-primary btn-block" type="submit">
+          <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
+          {% if ui_language == 'en' %}Login{% else %}Masuk{% endif %}
+        </button>
+
+        <div class="auth-form-foot">
+          <span>{% t "auth.login.no_account" %} <a href="{% url 'register' %}">{% t "auth.login.register" %}</a></span>
+          <a class="auth-home-link" href="{% url 'home' %}">← {% if ui_language == 'en' %}Homepage{% else %}Beranda{% endif %}</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
 {% endblock %}

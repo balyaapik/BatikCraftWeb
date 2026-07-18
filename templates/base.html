@@ -14,46 +14,83 @@
   <link rel="stylesheet" href="{% static 'css/auth-enhancements.css' %}">
   <link rel="stylesheet" href="{% static 'css/library-market-i18n.css' %}">
   <link rel="stylesheet" href="{% static 'css/heritage-asset-cloud.css' %}">
-  <link rel="stylesheet" href="{% static 'css/heritage-asset-corner.css' %}">
   <link rel="stylesheet" href="{% static 'css/heritage-showcase.css' %}">
   <link rel="stylesheet" href="{% static 'css/fullframe-overrides.css' %}">
+  <link rel="stylesheet" href="{% static 'css/interface-refinements.css' %}">
   {% block extra_head %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
   <div class="site-shell">
     {% block site_header %}
-    <div class="topbar">
-      {% if ui_language == 'en' %}Free Shipping · New Collection · 2026 Heritage Edition{% else %}Gratis Akses · Koleksi Baru · Edisi Warisan 2026{% endif %}
-    </div>
-    <header class="header" id="site-header">
-      <button class="nav-toggle" type="button" aria-label="{% t 'nav.open' %}" aria-controls="main-navigation" aria-expanded="false"><i class="fa-solid fa-bars"></i></button>
+    <header class="header header-refined" id="site-header">
+      <a class="brand brand-lockup" href="{% url 'home' %}" aria-label="BatikCraft home">
+        <span class="brand-title">BatikCraft</span>
+        <small>HERITAGE DIGITAL STUDIO</small>
+      </a>
+
+      <button class="nav-toggle" type="button" aria-label="{% t 'nav.open' %}" aria-controls="main-navigation" aria-expanded="false">
+        <i class="fa-solid fa-bars" aria-hidden="true"></i>
+      </button>
+
       <nav class="nav" id="main-navigation" aria-label="Main navigation">
         <a class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'home' %}">{% t "nav.home" %}</a>
         <a class="{% if request.resolver_match.url_name == 'news' %}active{% endif %}" href="{% url 'news' %}">{% if ui_language == 'en' %}News{% else %}Berita{% endif %}</a>
         <a class="{% if request.resolver_match.url_name == 'blog_list' or request.resolver_match.url_name == 'blog_detail' %}active{% endif %}" href="{% url 'blog_list' %}">{% t "nav.blog" %}</a>
-        <a class="{% if request.resolver_match.url_name == 'market' or request.resolver_match.url_name == 'nft_detail' %}active{% endif %}" href="{% url 'market' %}">{% t "nav.nft_market" %}</a>
-        <a class="{% if request.resolver_match.url_name == 'library_market' %}active{% endif %}" href="{% url 'library_market' %}">{% t "nav.library_market" %}</a>
-        <a class="{% if request.resolver_match.url_name == 'model_market' or request.resolver_match.url_name == 'model_detail' %}active{% endif %}" href="{% url 'model_market' %}">{% t "nav.model_market" %}</a>
+
+        <details class="nav-dropdown{% if request.resolver_match.url_name == 'market' or request.resolver_match.url_name == 'nft_detail' or request.resolver_match.url_name == 'library_market' or request.resolver_match.url_name == 'model_market' or request.resolver_match.url_name == 'model_detail' %} active{% endif %}">
+          <summary>
+            Market
+            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+          </summary>
+          <div class="nav-dropdown-menu">
+            <a class="{% if request.resolver_match.url_name == 'market' or request.resolver_match.url_name == 'nft_detail' %}active{% endif %}" href="{% url 'market' %}">
+              <i class="fa-solid fa-gem" aria-hidden="true"></i>
+              <span><strong>{% t "nav.nft_market" %}</strong><small>{% if ui_language == 'en' %}Collect complete digital works{% else %}Koleksi karya digital utuh{% endif %}</small></span>
+            </a>
+            <a class="{% if request.resolver_match.url_name == 'library_market' %}active{% endif %}" href="{% url 'library_market' %}">
+              <i class="fa-solid fa-shapes" aria-hidden="true"></i>
+              <span><strong>{% t "nav.library_market" %}</strong><small>{% if ui_language == 'en' %}Reusable motifs and ornaments{% else %}Motif dan ornamen siap pakai{% endif %}</small></span>
+            </a>
+            <a class="{% if request.resolver_match.url_name == 'model_market' or request.resolver_match.url_name == 'model_detail' %}active{% endif %}" href="{% url 'model_market' %}">
+              <i class="fa-solid fa-brain" aria-hidden="true"></i>
+              <span><strong>{% t "nav.model_market" %}</strong><small>{% if ui_language == 'en' %}Creator-trained AI models{% else %}Model AI hasil training kreator{% endif %}</small></span>
+            </a>
+          </div>
+        </details>
+
+        <a class="{% if request.resolver_match.url_name == 'download' %}active{% endif %}" href="{% url 'download' %}">{% t "nav.download" %}</a>
+        <a class="{% if request.resolver_match.url_name == 'app_page' %}active{% endif %}" href="{% url 'app_page' %}">App</a>
       </nav>
-      <a class="brand" href="{% url 'home' %}" aria-label="BatikCraft home">BatikCraft<small>HERITAGE DIGITAL STUDIO</small></a>
+
       <div class="header-actions">
         <form class="lang language-switcher" method="post" action="{% url 'set_ui_language' %}" aria-label="{% t 'language.label' %}">
-          {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
           <button type="submit" name="language" value="id" class="language-option{% if ui_language == 'id' %} active{% endif %}">ID</button>
           <button type="submit" name="language" value="en" class="language-option{% if ui_language == 'en' %} active{% endif %}">EN</button>
         </form>
         {% if user.is_authenticated %}
           <a href="{% url 'dashboard_router' %}">{% t "nav.dashboard" %}</a>
-          <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="header-link-button" type="submit">{% t "nav.logout" %}</button></form>
+          <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button class="header-link-button" type="submit">{% t "nav.logout" %}</button>
+          </form>
         {% else %}
           <a href="{% url 'login' %}">{% t "nav.login" %}</a>
-          <a class="btn btn-primary" href="{% url 'register' %}"><i class="fa-solid fa-user-plus"></i> Join</a>
+          <a class="btn btn-primary header-register" href="{% url 'register' %}"><i class="fa-solid fa-user-plus" aria-hidden="true"></i> {% if ui_language == 'en' %}Join{% else %}Daftar{% endif %}</a>
         {% endif %}
       </div>
     </header>
     {% endblock %}
-    {% if messages %}<div class="messages">{% for message in messages %}<div class="message {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+
+    {% if messages %}
+      <div class="messages">
+        {% for message in messages %}<div class="message {{ message.tags }}">{{ message }}</div>{% endfor %}
+      </div>
+    {% endif %}
+
     <main>{% block content %}{% endblock %}</main>
+
     {% block site_footer %}
     <footer class="footer">
       <div class="footer-grid">
@@ -70,8 +107,25 @@
     </footer>
     {% endblock %}
   </div>
+
   <script>
-    (() => { const header=document.getElementById('site-header'); const toggle=header?.querySelector('.nav-toggle'); if(!header||!toggle)return; toggle.addEventListener('click',()=>{const open=header.classList.toggle('nav-open'); toggle.setAttribute('aria-expanded',String(open));}); })();
+    (() => {
+      const header = document.getElementById("site-header");
+      const toggle = header?.querySelector(".nav-toggle");
+      if (!header || !toggle) return;
+
+      toggle.addEventListener("click", () => {
+        const open = header.classList.toggle("nav-open");
+        toggle.setAttribute("aria-expanded", String(open));
+      });
+
+      header.querySelectorAll(".nav-dropdown-menu a").forEach((link) => {
+        link.addEventListener("click", () => {
+          const details = link.closest("details");
+          if (details) details.open = false;
+        });
+      });
+    })();
   </script>
 </body>
 </html>
