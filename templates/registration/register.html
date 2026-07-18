@@ -1,51 +1,58 @@
 {% extends 'base.html' %}
-{% load ui_i18n %}
+{% load static ui_i18n %}
 
 {% block title %}{% t "auth.register.title" %}{% endblock %}
 {% block body_class %}bob-auth-page{% endblock %}
 {% block site_header %}{% endblock %}
 {% block site_footer %}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/bob-page-refinement.css' %}">{% endblock %}
 
 {% block content %}
-<section class="auth-page refined-auth auth-centered-page">
-  <div class="auth-container auth-single-card auth-single-card-register">
-    <div class="auth-panel">
-      <header class="auth-card-header">
-        <a class="auth-card-brand" href="{% url 'home' %}" aria-label="BatikCraft home">
-          <strong>BatikCraft</strong>
-          <small>HERITAGE DIGITAL STUDIO</small>
-        </a>
-        <form class="lang auth-lang" method="post" action="{% url 'set_ui_language' %}" aria-label="{% t 'language.label' %}">
-          {% csrf_token %}
-          <input type="hidden" name="next" value="{{ request.get_full_path }}">
-          <button type="submit" name="language" value="id" class="language-option{% if ui_language == 'id' %} active{% endif %}">ID</button>
-          <button type="submit" name="language" value="en" class="language-option{% if ui_language == 'en' %} active{% endif %}">EN</button>
-        </form>
-      </header>
-
-      <form method="post" class="auth-fields-form auth-register-form">
-        {% csrf_token %}
-        <div class="auth-title-block auth-title-centered">
-          <span class="auth-kicker">{% if ui_language == 'en' %}New membership{% else %}Keanggotaan baru{% endif %}</span>
-          <h2>{% if ui_language == 'en' %}Create a BatikCraft account{% else %}Buat akun BatikCraft{% endif %}</h2>
-          <p>{% if ui_language == 'en' %}One responsive account for Studio, creator publishing, and collecting.{% else %}Satu akun untuk Studio, publikasi kreator, dan mengoleksi karya.{% endif %}</p>
-        </div>
-
-        {{ form.non_field_errors }}
-        {% include 'registration/_auth_fields.html' %}
-        {% include 'registration/_captcha.html' %}
-
-        <button class="btn btn-primary btn-block" type="submit">
-          <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
-          {% if ui_language == 'en' %}Create Account{% else %}Buat Akun{% endif %}
-        </button>
-
-        <div class="auth-form-foot auth-form-foot-centered">
-          <span>{% t "auth.register.have_account" %} <a href="{% url 'login' %}">{% t "auth.register.login" %}</a></span>
-          <a class="auth-home-link" href="{% url 'home' %}">← {% if ui_language == 'en' %}Homepage{% else %}Beranda{% endif %}</a>
-        </div>
+<section class="bob-auth-wrap">
+  <div class="bob-auth-card bob-auth-card-register" aria-labelledby="register-title">
+    <header class="bob-auth-card-head">
+      <a class="bob-auth-brand" href="{% url 'home' %}" aria-label="BatikCraft home">
+        <img src="{% static 'img/batik-mark.svg' %}" alt="" aria-hidden="true">
+        <span class="bob-auth-brand-copy"><strong>BatikCraft</strong><small>HERITAGE DIGITAL STUDIO</small></span>
+      </a>
+      <form class="bob-lang-switch" method="post" action="{% url 'set_ui_language' %}" aria-label="{% t 'language.label' %}">
+        {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button type="submit" name="language" value="id" class="{% if ui_language == 'id' %}active{% endif %}">ID</button>
+        <button type="submit" name="language" value="en" class="{% if ui_language == 'en' %}active{% endif %}">EN</button>
       </form>
+    </header>
+
+    <div class="bob-auth-title">
+      <span class="bob-eyebrow"><i class="fa-solid fa-user-plus" aria-hidden="true"></i>{% if ui_language == 'en' %}New membership{% else %}Keanggotaan baru{% endif %}</span>
+      <h1 id="register-title">{% if ui_language == 'en' %}Create a BatikCraft account{% else %}Buat akun BatikCraft{% endif %}</h1>
+      <p>{% if ui_language == 'en' %}One account for Studio, creator publishing, and collecting.{% else %}Satu akun untuk Studio, publikasi kreator, dan mengoleksi karya.{% endif %}</p>
     </div>
+
+    <form method="post" class="bob-auth-form">
+      {% csrf_token %}{{ form.non_field_errors }}
+      <div class="bob-register-grid">
+        <div class="bob-field{% if form.display_name.errors %} has-error{% endif %}"><label for="{{ form.display_name.id_for_label }}"><i class="fa-solid fa-signature"></i>{% t "auth.field.display_name" %}</label>{{ form.display_name }}{{ form.display_name.errors }}</div>
+        <div class="bob-field{% if form.role.errors %} has-error{% endif %}"><label for="{{ form.role.id_for_label }}"><i class="fa-solid fa-users"></i>{% t "auth.field.role" %}</label>{{ form.role }}{{ form.role.errors }}</div>
+        <div class="bob-field{% if form.username.errors %} has-error{% endif %}"><label for="{{ form.username.id_for_label }}"><i class="fa-solid fa-user"></i>{% t "auth.field.username" %}</label>{{ form.username }}{{ form.username.errors }}</div>
+        <div class="bob-field{% if form.email.errors %} has-error{% endif %}"><label for="{{ form.email.id_for_label }}"><i class="fa-solid fa-envelope"></i>{% t "auth.field.email" %}</label>{{ form.email }}{{ form.email.errors }}</div>
+        <div class="bob-field{% if form.password1.errors %} has-error{% endif %}"><label for="{{ form.password1.id_for_label }}"><i class="fa-solid fa-key"></i>{{ form.password1.label }}</label><div class="bob-password-wrap">{{ form.password1 }}<button class="bob-password-toggle" type="button" data-password-target="{{ form.password1.id_for_label }}" aria-label="Tampilkan kata sandi"><i class="fa-regular fa-eye"></i></button></div>{{ form.password1.errors }}</div>
+        <div class="bob-field{% if form.password2.errors %} has-error{% endif %}"><label for="{{ form.password2.id_for_label }}"><i class="fa-solid fa-key"></i>{{ form.password2.label }}</label><div class="bob-password-wrap">{{ form.password2 }}<button class="bob-password-toggle" type="button" data-password-target="{{ form.password2.id_for_label }}" aria-label="Tampilkan kata sandi"><i class="fa-regular fa-eye"></i></button></div>{{ form.password2.errors }}</div>
+      </div>
+
+      {% include 'registration/_bob_captcha.html' %}
+      <button class="btn btn-primary btn-block" type="submit"><i class="fa-solid fa-user-plus" aria-hidden="true"></i>{% if ui_language == 'en' %}Create Account{% else %}Buat Akun{% endif %}</button>
+      <div class="bob-auth-foot"><span>{% t "auth.register.have_account" %} <a href="{% url 'login' %}">{% t "auth.register.login" %}</a></span><a href="{% url 'home' %}">← {% if ui_language == 'en' %}Homepage{% else %}Beranda{% endif %}</a></div>
+    </form>
   </div>
 </section>
+<script>
+  document.querySelectorAll('[data-password-target]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const input = document.getElementById(button.dataset.passwordTarget);
+      if (!input) return;
+      input.type = input.type === 'password' ? 'text' : 'password';
+      button.querySelector('i')?.classList.toggle('fa-eye-slash');
+    });
+  });
+</script>
 {% endblock %}
