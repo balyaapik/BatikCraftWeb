@@ -14,7 +14,7 @@ Website Django untuk ekosistem BatikCraft: landing page, blog, creator dashboard
 - Upload melalui file multipart atau URL gambar.
 - Bidding transaksional dengan validasi harga berjalan dan waktu auction.
 - Django Admin teknis tetap tersedia untuk pengelolaan tingkat lanjut.
-- Data demo, Docker, WhiteNoise, dan GitHub Actions.
+- Docker, WhiteNoise, dan GitHub Actions.
 
 ## Menjalankan lokal
 
@@ -25,17 +25,11 @@ python -m venv .venv
 pip install -r requirements-dev.txt
 cp .env.example .env
 python manage.py migrate
-python manage.py seed_demo
+python manage.py createsuperuser
 python manage.py runserver
 ```
 
 Buka `http://127.0.0.1:8000/`.
-
-Akun demo:
-
-- Admin: `admin_demo` / `BatikCraft123!`
-- Creator: `creator_demo` / `BatikCraft123!`
-- Buyer: `buyer_demo` / `BatikCraft123!`
 
 Dashboard admin tersedia di `http://127.0.0.1:8000/dashboard/admin/`. Akun dengan `is_staff=True` atau `is_superuser=True` otomatis diarahkan ke dashboard admin setelah login.
 
