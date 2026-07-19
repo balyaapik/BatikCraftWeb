@@ -7,6 +7,7 @@ from .api_views import (
     ModelAssetViewSet,
     ModelLibraryView,
     NFTAssetViewSet,
+    StudioCapabilitiesView,
     StudioLogoutView,
 )
 
@@ -15,6 +16,7 @@ router.register("nfts", NFTAssetViewSet, basename="api-nft")
 router.register("models", ModelAssetViewSet, basename="api-model")
 
 urlpatterns = [
+    path("capabilities/", StudioCapabilitiesView.as_view(), name="api_capabilities"),
     path("auth/token/", obtain_auth_token, name="api_token"),
     path("auth/logout/", StudioLogoutView.as_view(), name="api_logout"),
     path("me/", MeView.as_view(), name="api_me"),
