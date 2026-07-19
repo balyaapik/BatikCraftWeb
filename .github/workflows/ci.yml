@@ -16,6 +16,8 @@ jobs:
           cache: pip
       - run: pip install -q -r requirements-dev.txt
       - run: python manage.py check
+      - name: Check for missing migrations
+        run: python manage.py makemigrations --check --dry-run
       - name: Run Django tests
         run: python manage.py test 2>&1 | tee django-test.log
       - name: Upload Django test log on failure
@@ -25,3 +27,36 @@ jobs:
           name: django-test-log-${{ github.run_id }}
           path: django-test.log
       - run: ruff check .
+
+  mysql:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root-ci-password
+          MYSQL_DATABASE: batikcraft_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot-ci-password --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DATABASE_URL: mysql://root:root-ci-password@127.0.0.1:3306/batikcraft_ci
+      DJANGO_SECRET_KEY: mysql-ci-secret-key
+      BATIKCRAFT_CREDENTIAL_ENCRYPTION_KEY: mysql-ci-storage-key
+      DJANGO_DEBUG: "True"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install MySQL build dependencies
+        run: sudo apt-get update && sudo apt-get install -y default-libmysqlclient-dev pkg-config
+      - run: pip install -q -r requirements-mysql.txt
+      - run: python manage.py migrate --noinput
+      - run: python manage.py check --database default
+      - run: python manage.py test
