@@ -4,24 +4,27 @@ import json
 import tempfile
 from datetime import timedelta
 from decimal import Decimal
+from io import BytesIO
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
+from PIL import Image
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
 from .models import NFTAsset, User
 
-# Valid 1x1 transparent PNG.
-PNG_1X1 = (
-    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
-    b"\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89"
-    b"\x00\x00\x00\rIDAT\x08\xd7c\xf8\xcf\xc0\x00\x00\x03"
-    b"\x01\x01\x00\x18\xdd\x8d\xb4\x00\x00\x00\x00IEND"
-    b"\xaeB`\x82"
-)
+
+def valid_png_upload() -> SimpleUploadedFile:
+    stream = BytesIO()
+    Image.new("RGBA", (1, 1), (0, 0, 0, 0)).save(stream, format="PNG")
+    return SimpleUploadedFile(
+        "preview.png",
+        stream.getvalue(),
+        content_type="image/png",
+    )
 
 
 class StudioAPIContractTests(APITestCase):
@@ -65,11 +68,7 @@ class StudioAPIContractTests(APITestCase):
                     "asset_count": 3,
                 }
             ),
-            "image": SimpleUploadedFile(
-                "preview.png",
-                PNG_1X1,
-                content_type="image/png",
-            ),
+            "image": valid_png_upload(),
         }
         if include_package:
             payload["package_file"] = SimpleUploadedFile(
@@ -115,6 +114,7 @@ class StudioAPIContractTests(APITestCase):
 
     def test_winning_bidder_downloads_package_only_after_auction_closes(self):
         created = self.upload_library()
+        self.assertEqual(created.status_code, 201, created.data)
         nft = NFTAsset.objects.get(pk=created.data["id"])
         self.client.post(reverse("api-nft-publish", args=[nft.pk]), {}, format="json")
 
