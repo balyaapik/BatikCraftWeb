@@ -8,11 +8,14 @@ Website Django untuk ekosistem BatikCraft: landing page, blog, creator dashboard
 - Registrasi dan login multi-role: **Creator/User** atau **Buyer**.
 - Creator dashboard untuk profil, draft NFT, publish ke market, harga, metadata, dan statistik bidding.
 - Buyer dashboard untuk live auction dan riwayat bidding.
-- Dashboard admin khusus untuk statistik, blog/post, pengguna, NFT, dan audit bidding.
+- Dashboard admin khusus untuk statistik, blog/post, pengguna, NFT, audit bidding, dan konfigurasi Cloudflare R2.
 - Editor artikel dengan draft, publish/unpublish, slug otomatis, cover URL, dan waktu publikasi.
 - REST API dengan token authentication untuk upload NFT dari aplikasi Studio.
 - Upload melalui file multipart atau URL gambar.
 - Bidding transaksional dengan validasi harga berjalan dan waktu auction.
+- Penyimpanan media dinamis: folder lokal VPS atau Cloudflare R2 tanpa restart aplikasi.
+- Kredensial R2 disimpan terenkripsi dan Secret Access Key tidak ditampilkan kembali.
+- Dukungan database SQLite untuk development, PostgreSQL, serta MySQL 8 dengan pengujian CI terpisah.
 - Django Admin teknis tetap tersedia untuk pengelolaan tingkat lanjut.
 - Docker, WhiteNoise, dan GitHub Actions.
 
@@ -32,6 +35,12 @@ python manage.py runserver
 Buka `http://127.0.0.1:8000/`.
 
 Dashboard admin tersedia di `http://127.0.0.1:8000/dashboard/admin/`. Akun dengan `is_staff=True` atau `is_superuser=True` otomatis diarahkan ke dashboard admin setelah login.
+
+Konfigurasi R2 tersedia di:
+
+```text
+/dashboard/admin/storage/
+```
 
 ## API Studio
 
@@ -58,21 +67,40 @@ template melalui tag `{% t "kunci" %}`.
 
 ```bash
 python manage.py check
+python manage.py makemigrations --check --dry-run
 python manage.py test
 ruff check .
 ```
 
-## Deployment
+GitHub Actions juga menjalankan migrasi, system check, dan seluruh test terhadap MySQL 8.4.
 
-Salin `.env.example` menjadi `.env`, ganti secret key, matikan debug, isi hostname, lalu gunakan Docker.
-Aplikasi menolak start dengan `DJANGO_DEBUG=False` selama `DJANGO_SECRET_KEY` masih memakai nilai contoh.
-Dengan debug dimatikan, HSTS, `SECURE_SSL_REDIRECT`, dan cookie `Secure` aktif secara default:
+## Deployment VPS
+
+Panduan lengkap deployment VPS, konfigurasi R2, pemindahan media, migrasi data, dan rollback tersedia di:
+
+[`docs/VPS_R2_MYSQL.md`](docs/VPS_R2_MYSQL.md)
+
+Untuk stack MySQL berbasis Docker:
 
 ```bash
-docker compose up --build
+docker compose -f docker-compose.mysql.yml up --build
 ```
 
-File `.batikmodel` dialirkan melalui Django dan tidak pernah dilayani sebagai URL storage publik,
-sehingga hak akses pembeli tetap berlaku pada storage apa pun.
+Untuk instalasi native MySQL, gunakan:
 
-Untuk production, gunakan PostgreSQL dan object storage (S3/R2) untuk media NFT. Model dan serializer saat ini telah memisahkan `image` dan `image_url`, sehingga migrasi storage dapat dilakukan tanpa mengubah kontrak API utama.
+```bash
+pip install -r requirements-mysql.txt
+```
+
+Salin `.env.example` menjadi `.env`, ganti kedua secret key, matikan debug, isi hostname, dan isi `DATABASE_URL`. Aplikasi menolak start dengan `DJANGO_DEBUG=False` selama `DJANGO_SECRET_KEY` masih memakai nilai contoh.
+
+Dengan debug dimatikan, HSTS, `SECURE_SSL_REDIRECT`, dan cookie `Secure` aktif secara default.
+
+File `.batikmodel` dan paket sumber dialirkan melalui Django setelah pemeriksaan hak akses. Mode R2 yang disarankan tetap memakai signed URL dan bucket privat.
+
+Media lama dapat diperiksa dan dipindahkan dengan:
+
+```bash
+python manage.py migrate_media_to_r2 --dry-run
+python manage.py migrate_media_to_r2
+```
