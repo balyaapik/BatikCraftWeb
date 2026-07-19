@@ -1,5 +1,4 @@
 """Pages that any visitor can open without signing in."""
-
 from __future__ import annotations
 
 from django.db.models import Count, Max, Q
@@ -9,7 +8,7 @@ from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
-from .forms import BidForm
+from .forms import AuctionInvoiceForm, BidForm
 from .models import BlogPost, ModelAsset, ModelPurchase, NFTAsset, User
 from .ui_language import (
     LANGUAGE_COOKIE_KEY,
@@ -155,13 +154,19 @@ def model_market(request: HttpRequest) -> HttpResponse:
 
 
 def nft_detail(request: HttpRequest, pk: int) -> HttpResponse:
-    nft = get_object_or_404(NFTAsset.objects.select_related("owner"), pk=pk)
+    nft = get_object_or_404(
+        NFTAsset.objects.select_related("owner", "current_owner"),
+        pk=pk,
+    )
+    settlement = getattr(nft, "settlement", None)
     return render(
         request,
         "core/nft_detail.html",
         {
             "nft": nft,
+            "settlement": settlement,
             "bid_form": BidForm(),
+            "invoice_form": AuctionInvoiceForm(),
             "bids": nft.bids.select_related("bidder")[:20],
         },
     )
@@ -230,12 +235,7 @@ def news(request: HttpRequest) -> HttpResponse:
 
 @require_POST
 def set_ui_language(request: HttpRequest) -> HttpResponse:
-    """Store the interface language in the session and in a cookie.
-
-    ``django.contrib.auth.login`` flushes the session when a different user
-    signs in, so the session alone cannot keep the choice across a login or
-    logout. The cookie is the durable copy, the session is the fast one.
-    """
+    """Store the interface language in the session and in a cookie."""
 
     language = normalize_language(request.POST.get("language"))
     request.session[LANGUAGE_SESSION_KEY] = language

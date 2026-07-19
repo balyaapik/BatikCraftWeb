@@ -16,6 +16,11 @@ urlpatterns = [
     path("market/", public_views.nft_market, name="market"),
     path("market/<int:pk>/", public_views.nft_detail, name="nft_detail"),
     path("market/<int:pk>/bid/", views.place_bid, name="place_bid"),
+    path(
+        "market/<int:pk>/invoice/",
+        views.create_auction_invoice,
+        name="create_auction_invoice",
+    ),
     path("library/", public_views.library_market, name="library_market"),
     path("models/", public_views.model_market, name="model_market"),
     path("models/<int:pk>/", public_views.model_detail, name="model_detail"),
@@ -51,6 +56,41 @@ urlpatterns = [
         "dashboard/nfts/<int:pk>/publish/",
         views.nft_publish,
         name="nft_publish",
+    ),
+    path(
+        "dashboard/settlements/<uuid:public_id>/",
+        views.settlement_detail,
+        name="settlement_detail",
+    ),
+    path(
+        "dashboard/settlements/<uuid:public_id>/accept/",
+        views.accept_auction_invoice,
+        name="accept_auction_invoice",
+    ),
+    path(
+        "dashboard/settlements/<uuid:public_id>/decline/",
+        views.decline_auction_invoice,
+        name="decline_auction_invoice",
+    ),
+    path(
+        "dashboard/settlements/<uuid:public_id>/payment/",
+        views.submit_auction_payment,
+        name="submit_auction_payment",
+    ),
+    path(
+        "dashboard/settlements/<uuid:public_id>/verify/",
+        views.verify_auction_payment,
+        name="verify_auction_payment",
+    ),
+    path(
+        "dashboard/settlements/<uuid:public_id>/reject-payment/",
+        views.reject_auction_payment,
+        name="reject_auction_payment",
+    ),
+    path(
+        "dashboard/settlements/<uuid:public_id>/proof/",
+        views.settlement_payment_proof,
+        name="settlement_payment_proof",
     ),
     path("dashboard/models/new/", views.model_create, name="model_create"),
     path(
