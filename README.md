@@ -76,3 +76,7 @@ File `.batikmodel` dialirkan melalui Django dan tidak pernah dilayani sebagai UR
 sehingga hak akses pembeli tetap berlaku pada storage apa pun.
 
 Untuk production, gunakan PostgreSQL dan object storage (S3/R2) untuk media NFT. Model dan serializer saat ini telah memisahkan `image` dan `image_url`, sehingga migrasi storage dapat dilakukan tanpa mengubah kontrak API utama.
+
+### Firebase Hosting + Cloud Run
+
+Konfigurasi deployment Firebase Hosting, Cloud Run, Secret Manager, Workload Identity Federation, dan GitHub Actions tersedia di [`docs/FIREBASE_DEPLOYMENT.md`](docs/FIREBASE_DEPLOYMENT.md).
