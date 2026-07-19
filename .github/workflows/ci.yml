@@ -16,6 +16,12 @@ jobs:
           cache: pip
       - run: pip install -q -r requirements-dev.txt
       - run: python manage.py check
+      - name: Validate deployment files
+        run: |
+          python -m json.tool firebase.json >/dev/null
+          bash -n scripts/bootstrap_firebase_gcp.sh
+      - name: Build production container
+        run: docker build --tag batikcraft-web:test .
       - name: Run Django tests
         run: python manage.py test 2>&1 | tee django-test.log
       - name: Upload Django test log on failure
