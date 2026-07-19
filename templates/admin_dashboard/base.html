@@ -28,6 +28,8 @@
       <a class="{% if 'bid' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'admin_dashboard:bid_list' %}"><i class="fa-solid fa-arrow-trend-up"></i> Bidding</a>
       <span class="admin-menu-label">People</span>
       <a class="{% if 'user' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'admin_dashboard:user_list' %}"><i class="fa-solid fa-users"></i> Pengguna</a>
+      <span class="admin-menu-label">System</span>
+      <a class="{% if request.resolver_match.url_name == 'storage_settings' %}active{% endif %}" href="{% url 'admin_dashboard:storage_settings' %}"><i class="fa-solid fa-cloud-arrow-up"></i> Penyimpanan R2</a>
     </nav>
 
     <div class="admin-sidebar-foot">

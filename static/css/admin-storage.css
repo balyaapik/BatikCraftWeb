@@ -1,0 +1,113 @@
+.storage-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.storage-status-card,
+.storage-guide-card {
+  border: 1px solid rgba(21, 84, 80, 0.16);
+  border-radius: 18px;
+  background: rgba(255, 252, 244, 0.94);
+  box-shadow: 0 12px 28px rgba(42, 55, 50, 0.08);
+}
+
+.storage-status-card {
+  display: grid;
+  gap: 0.38rem;
+  padding: 1.1rem 1.2rem;
+}
+
+.storage-status-card span {
+  color: #6a7772;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.storage-status-card strong {
+  color: #174f4b;
+  font-size: 1rem;
+}
+
+.storage-status-card small,
+.storage-guide-card p,
+.storage-guide-card li {
+  color: #60706a;
+  line-height: 1.55;
+}
+
+.storage-break {
+  overflow-wrap: anywhere;
+}
+
+.storage-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(280px, 0.75fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.storage-form {
+  margin: 0;
+}
+
+.storage-guide-card {
+  padding: 1.35rem;
+}
+
+.storage-guide-card h2,
+.storage-guide-card h3 {
+  color: #174f4b;
+  margin: 0 0 0.75rem;
+}
+
+.storage-guide-card h3 {
+  margin-top: 1.25rem;
+}
+
+.storage-guide-card ol {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.storage-guide-card li + li {
+  margin-top: 0.5rem;
+}
+
+.storage-warning {
+  border-left: 4px solid #a0455b;
+  border-radius: 10px;
+  background: rgba(160, 69, 91, 0.08);
+  margin-top: 1.2rem;
+  padding: 0.85rem 0.95rem;
+}
+
+.storage-warning strong {
+  color: #8e354d;
+}
+
+.storage-warning p {
+  margin: 0.35rem 0 0;
+}
+
+.storage-guide-card pre {
+  overflow-x: auto;
+  border-radius: 12px;
+  background: #173f3d;
+  color: #fffdf7;
+  padding: 0.85rem;
+}
+
+.storage-actions {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 1050px) {
+  .storage-status-grid,
+  .storage-layout {
+    grid-template-columns: 1fr;
+  }
+}

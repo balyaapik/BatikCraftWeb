@@ -1,8 +1,9 @@
-from pathlib import Path
 import os
+from pathlib import Path
+
+import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
-import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
@@ -26,8 +27,16 @@ if not DEBUG and SECRET_KEY in INSECURE_SECRET_KEYS:
         "DJANGO_SECRET_KEY masih memakai nilai contoh. "
         "Buat kunci acak baru sebelum menjalankan dengan DJANGO_DEBUG=False."
     )
-ALLOWED_HOSTS = [h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",") if h.strip()]
-CSRF_TRUSTED_ORIGINS = [h.strip() for h in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if h.strip()]
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+    if host.strip()
+]
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
+]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -38,6 +47,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework.authtoken",
+    "storages",
+    "storage_config.apps.StorageConfigConfig",
     "core",
 ]
 
@@ -78,6 +89,11 @@ DATABASES = {
         conn_health_checks=True,
     )
 }
+if DATABASES["default"]["ENGINE"] == "django.db.backends.mysql":
+    mysql_options = DATABASES["default"].setdefault("OPTIONS", {})
+    mysql_options.setdefault("charset", "utf8mb4")
+    mysql_options.setdefault("init_command", "SET sql_mode='STRICT_TRANS_TABLES'")
+    mysql_options.setdefault("isolation_level", "read committed")
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -95,7 +111,7 @@ STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STORAGES = {
-    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "default": {"BACKEND": "storage_config.backends.DynamicMediaStorage"},
     "staticfiles": {
         "BACKEND": (
             "django.contrib.staticfiles.storage.StaticFilesStorage"
@@ -104,8 +120,12 @@ STORAGES = {
         )
     },
 }
-MEDIA_URL = "media/"
+MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+BATIKCRAFT_CREDENTIAL_ENCRYPTION_KEY = os.getenv(
+    "BATIKCRAFT_CREDENTIAL_ENCRYPTION_KEY",
+    "",
+)
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "core.User"
@@ -121,10 +141,14 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
-    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"] if not DEBUG else [
-        "rest_framework.renderers.JSONRenderer",
-        "rest_framework.renderers.BrowsableAPIRenderer",
-    ],
+    "DEFAULT_RENDERER_CLASSES": (
+        ["rest_framework.renderers.JSONRenderer"]
+        if not DEBUG
+        else [
+            "rest_framework.renderers.JSONRenderer",
+            "rest_framework.renderers.BrowsableAPIRenderer",
+        ]
+    ),
 }
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

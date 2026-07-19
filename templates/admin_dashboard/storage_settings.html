@@ -1,0 +1,77 @@
+{% extends "admin_dashboard/base.html" %}
+{% load static %}
+
+{% block admin_title %}Penyimpanan R2{% endblock %}
+{% block admin_heading %}Penyimpanan{% endblock %}
+
+{% block extra_head %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'css/admin-storage.css' %}">
+{% endblock %}
+
+{% block admin_content %}
+<div class="admin-page-head compact">
+  <div>
+    <span class="admin-eyebrow">System</span>
+    <h1>Cloudflare R2</h1>
+    <p>Atur penyimpanan media tanpa mengubah file konfigurasi VPS.</p>
+  </div>
+</div>
+
+<div class="storage-status-grid">
+  <article class="storage-status-card">
+    <span>Backend aktif</span>
+    <strong>{{ backend_label }}</strong>
+    <small>{% if configuration.enabled %}Upload baru dikirim ke bucket R2.{% else %}Upload baru disimpan di folder media VPS.{% endif %}</small>
+  </article>
+  <article class="storage-status-card">
+    <span>Secret Access Key</span>
+    <strong>{% if configuration.has_secret_access_key %}Tersimpan terenkripsi{% else %}Belum tersimpan{% endif %}</strong>
+    <small>Nilai secret tidak pernah ditampilkan kembali oleh dashboard.</small>
+  </article>
+  <article class="storage-status-card">
+    <span>Endpoint</span>
+    <strong class="storage-break">{{ configuration.endpoint_url|default:"Belum dikonfigurasi" }}</strong>
+    <small>Region S3 untuk Cloudflare R2 menggunakan nilai <code>auto</code>.</small>
+  </article>
+</div>
+
+<div class="storage-layout">
+  <form class="admin-editor-card storage-form" method="post">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="admin-form-errors">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="admin-form-grid">
+      {% for field in form %}
+      <div class="admin-field {% if field.name == 'endpoint_override' or field.name == 'secret_access_key' or field.name == 'custom_domain' %}admin-field-wide{% endif %}">
+        <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span>*</span>{% endif %}</label>
+        {{ field }}
+        {% if field.help_text %}<small>{{ field.help_text|safe }}</small>{% endif %}
+        {% if field.errors %}<div class="admin-field-error">{{ field.errors|striptags }}</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    <div class="admin-form-actions storage-actions">
+      <button class="admin-btn admin-btn-secondary" type="submit" name="action" value="save">Simpan tanpa tes</button>
+      <button class="admin-btn admin-btn-primary" type="submit" name="action" value="save_test">Uji koneksi &amp; simpan</button>
+    </div>
+  </form>
+
+  <aside class="storage-guide-card">
+    <h2>Konfigurasi yang disarankan</h2>
+    <ol>
+      <li>Buat bucket privat di Cloudflare R2.</li>
+      <li>Buat API token Object Read &amp; Write hanya untuk bucket tersebut.</li>
+      <li>Aktifkan signed URL agar model dan paket sumber tetap privat.</li>
+      <li>Tekan <strong>Uji koneksi &amp; simpan</strong> sebelum migrasi file.</li>
+    </ol>
+    <div class="storage-warning">
+      <strong>Perhatian</strong>
+      <p>Mematikan signed URL membuat file dapat dilayani melalui custom domain publik. Jangan gunakan mode tersebut untuk bucket yang menyimpan <code>.batikmodel</code> atau <code>.batikpack</code>.</p>
+    </div>
+    <h3>Migrasi media lama</h3>
+    <pre><code>python manage.py migrate_media_to_r2 --dry-run
+python manage.py migrate_media_to_r2</code></pre>
+    <p>Perintah pertama hanya memeriksa daftar file. Perintah kedua menyalin file dari folder media VPS ke R2.</p>
+  </aside>
+</div>
+{% endblock %}

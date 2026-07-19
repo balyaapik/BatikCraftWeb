@@ -1,5 +1,7 @@
 from django.urls import path
 
+from storage_config import views as storage_views
+
 from . import admin_views
 
 app_name = "admin_dashboard"
@@ -19,4 +21,5 @@ urlpatterns = [
     path("nfts/<int:pk>/delete/", admin_views.nft_delete, name="nft_delete"),
     path("bids/", admin_views.bid_list, name="bid_list"),
     path("bids/<int:pk>/delete/", admin_views.bid_delete, name="bid_delete"),
+    path("storage/", storage_views.storage_settings, name="storage_settings"),
 ]
