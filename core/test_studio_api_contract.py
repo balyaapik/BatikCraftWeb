@@ -14,7 +14,7 @@ from PIL import Image
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
-from .models import NFTAsset, User
+from .models import AuctionSettlement, NFTAsset, User
 
 
 def valid_png_upload() -> SimpleUploadedFile:
@@ -29,7 +29,9 @@ def valid_png_upload() -> SimpleUploadedFile:
 
 class StudioAPIContractTests(APITestCase):
     def setUp(self):
-        self.media = tempfile.TemporaryDirectory(prefix="batikcraft-web-test-media-")
+        self.media = tempfile.TemporaryDirectory(
+            prefix="batikcraft-web-test-media-"
+        )
         self.settings_override = override_settings(MEDIA_ROOT=self.media.name)
         self.settings_override.enable()
         self.addCleanup(self.settings_override.disable)
@@ -59,7 +61,9 @@ class StudioAPIContractTests(APITestCase):
             "source_project_id": "asset-library-sekar-v1",
             "source_app_version": "0.2.0",
             "starting_price": "100000.00",
-            "auction_ends_at": (timezone.now() + timedelta(hours=1)).isoformat(),
+            "auction_ends_at": (
+                timezone.now() + timedelta(hours=1)
+            ).isoformat(),
             "metadata": json.dumps(
                 {
                     "source_type": "asset_library",
@@ -76,15 +80,23 @@ class StudioAPIContractTests(APITestCase):
                 b"PK\x03\x04batik-pack-content",
                 content_type="application/zip",
             )
-        return self.client.post(reverse("api-nft-list"), payload, format="multipart")
+        return self.client.post(
+            reverse("api-nft-list"),
+            payload,
+            format="multipart",
+        )
 
     def test_capabilities_describe_every_studio_marketplace_feature(self):
         self.client.credentials()
         response = self.client.get(reverse("api_capabilities"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["api_version"], "1.1")
+        self.assertEqual(response.data["api_version"], "1.2")
         self.assertEqual(response.data["minimum_studio_version"], "0.2.0")
+        self.assertTrue(response.data["features"]["nft_auction_settlement"])
+        self.assertTrue(response.data["features"]["nft_payment_verification"])
+        self.assertTrue(response.data["features"]["nft_registry_mint"])
+        self.assertTrue(response.data["features"]["nft_owned_library"])
         self.assertTrue(response.data["features"]["nft_source_package_upload"])
         self.assertTrue(response.data["features"]["nft_source_package_download"])
         self.assertTrue(response.data["features"]["model_download"])
@@ -104,7 +116,9 @@ class StudioAPIContractTests(APITestCase):
         )
         self.assertEqual(published.status_code, 200, published.data)
 
-        owner_download = self.client.get(reverse("api-nft-package", args=[nft.pk]))
+        owner_download = self.client.get(
+            reverse("api-nft-package", args=[nft.pk])
+        )
         self.assertEqual(owner_download.status_code, 200)
         self.assertIn("sekar.batikpack", owner_download["Content-Disposition"])
         self.assertEqual(
@@ -112,27 +126,65 @@ class StudioAPIContractTests(APITestCase):
             package_record["sha256"],
         )
 
-    def test_winning_bidder_downloads_package_only_after_auction_closes(self):
+    def test_winning_bidder_downloads_package_only_after_paid_mint(self):
         created = self.upload_library()
         self.assertEqual(created.status_code, 201, created.data)
         nft = NFTAsset.objects.get(pk=created.data["id"])
-        self.client.post(reverse("api-nft-publish", args=[nft.pk]), {}, format="json")
+        self.client.post(
+            reverse("api-nft-publish", args=[nft.pk]),
+            {},
+            format="json",
+        )
 
         self.auth(self.buyer_token)
-        bid = self.client.post(
+        bid_response = self.client.post(
             reverse("api-nft-bids", args=[nft.pk]),
             {"amount": "150000.00"},
             format="json",
         )
-        self.assertEqual(bid.status_code, 201, bid.data)
-        before_end = self.client.get(reverse("api-nft-package", args=[nft.pk]))
+        self.assertEqual(bid_response.status_code, 201, bid_response.data)
+        winning_bid = nft.bids.get(pk=bid_response.data["id"])
+
+        before_end = self.client.get(
+            reverse("api-nft-package", args=[nft.pk])
+        )
         self.assertEqual(before_end.status_code, 403)
 
+        now = timezone.now()
         NFTAsset.objects.filter(pk=nft.pk).update(
-            auction_ends_at=timezone.now() - timedelta(seconds=1)
+            auction_ends_at=now - timedelta(seconds=1)
         )
-        after_end = self.client.get(reverse("api-nft-package", args=[nft.pk]))
-        self.assertEqual(after_end.status_code, 200)
+        after_end_unpaid = self.client.get(
+            reverse("api-nft-package", args=[nft.pk])
+        )
+        self.assertEqual(after_end_unpaid.status_code, 403)
+
+        settlement = AuctionSettlement.objects.create(
+            nft=nft,
+            winning_bid=winning_bid,
+            creator=self.creator,
+            buyer=self.buyer,
+            amount=winning_bid.amount,
+            status=AuctionSettlement.Status.MINTED,
+            payment_instructions="Transfer pengujian",
+            payment_due_at=now + timedelta(days=1),
+            paid_at=now,
+            minted_at=now,
+            mint_reference="BCMINT-CONTRACT-TEST",
+        )
+        NFTAsset.objects.filter(pk=nft.pk).update(
+            status=NFTAsset.Status.SOLD,
+            current_owner=self.buyer,
+            minted_at=now,
+            token_id="BC-CONTRACT-TEST",
+            blockchain="BatikCraft Registry",
+        )
+        settlement.refresh_from_db()
+
+        after_paid_mint = self.client.get(
+            reverse("api-nft-package", args=[nft.pk])
+        )
+        self.assertEqual(after_paid_mint.status_code, 200)
 
     def test_asset_library_publish_requires_batikpack(self):
         created = self.upload_library(include_package=False)

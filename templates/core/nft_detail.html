@@ -8,28 +8,48 @@
     <span class="eyebrow">{% if nft.metadata.source_type == 'library_asset' %}<i class="fa-solid fa-puzzle-piece" aria-hidden="true"></i> {% t "detail.library_asset" %} · {% endif %}{{ nft.get_status_display }}</span>
     <h1>{{ nft.title }}</h1>
     <p class="creator-line">{% t "detail.created_by" %} <strong>{{ nft.owner.public_name }}</strong></p>
+    {% if nft.current_owner %}<p class="creator-line">Kolektor saat ini <strong>{{ nft.current_owner.public_name }}</strong></p>{% endif %}
     <p>{% if nft.description %}{{ nft.description }}{% else %}{% t "detail.default_description" %}{% endif %}</p>
-    {% if nft.metadata.source_type == 'library_asset' %}
-      <dl class="metadata-list asset-detail-meta">
-        <div><dt>{% t "common.category" %}</dt><dd>{{ nft.metadata.asset_category|default:'—' }}</dd></div>
-        <div><dt>{% t "common.license" %}</dt><dd>{{ nft.metadata.license|default:'—' }}</dd></div>
-        <div><dt>{% t "common.dimensions" %}</dt><dd>{% if nft.metadata.width and nft.metadata.height %}{{ nft.metadata.width }} × {{ nft.metadata.height }} px{% else %}—{% endif %}</dd></div>
-      </dl>
-    {% endif %}
     <div class="bid-panel">
       <span>{% t "detail.current_price" %}</span>
       <strong>Rp{{ nft.current_price|floatformat:0 }}</strong>
       <small>{{ nft.bids.count }} {% t "detail.saved_bids" %}</small>
-      {% if user.is_authenticated and user.role == 'buyer' %}
+      {% if user.is_authenticated and user.role == 'buyer' and nft.status == 'listed' %}
         <form method="post" action="{% url 'place_bid' nft.pk %}">{% csrf_token %}{{ bid_form.amount }}<button class="btn btn-primary" {% if not nft.is_auction_open %}disabled{% endif %}>{% t "detail.place_bid" %}</button></form>
-      {% elif not user.is_authenticated %}
+      {% elif not user.is_authenticated and nft.status == 'listed' %}
         <a class="btn btn-primary" href="{% url 'login' %}?next={{ request.path }}">{% t "detail.login_bid" %}</a>
       {% endif %}
     </div>
+
+    {% if user.is_authenticated and user.id == nft.owner_id and nft.auction_has_ended %}
+      {% if settlement %}
+        <a class="btn btn-primary" href="{% url 'settlement_detail' settlement.public_id %}">Buka invoice {{ settlement.invoice_number }}</a>
+      {% elif nft.highest_bid and nft.reserve_met %}
+        <div class="bid-panel">
+          <strong>Tagih pemenang bid</strong>
+          <small>Bid tertinggi: {{ nft.highest_bid.bidder.public_name }} · Rp{{ nft.highest_bid.amount|floatformat:0 }}</small>
+          <form method="post" action="{% url 'create_auction_invoice' nft.pk %}">
+            {% csrf_token %}
+            {{ invoice_form.as_p }}
+            <button class="btn btn-primary" type="submit">Kirim invoice ke pemenang</button>
+          </form>
+        </div>
+      {% elif nft.highest_bid %}
+        <div class="bid-panel"><small>Bid tertinggi belum mencapai reserve price.</small></div>
+      {% else %}
+        <div class="bid-panel"><small>Auction selesai tanpa bid.</small></div>
+      {% endif %}
+    {% endif %}
+
+    {% if settlement and user.is_authenticated and user.id == settlement.buyer_id %}
+      <a class="btn btn-primary" href="{% url 'settlement_detail' settlement.public_id %}">Lihat tagihan lelang</a>
+    {% endif %}
+
     <dl class="metadata-list">
       <div><dt>Project ID</dt><dd>{{ nft.source_project_id|default:'—' }}</dd></div>
-      <div><dt>Blockchain</dt><dd>{% if nft.blockchain %}{{ nft.blockchain }}{% else %}{% t "detail.not_minted" %}{% endif %}</dd></div>
+      <div><dt>Blockchain / Registry</dt><dd>{% if nft.blockchain %}{{ nft.blockchain }}{% else %}{% t "detail.not_minted" %}{% endif %}</dd></div>
       <div><dt>Token ID</dt><dd>{{ nft.token_id|default:'—' }}</dd></div>
+      <div><dt>Minted</dt><dd>{{ nft.minted_at|date:'d M Y, H:i'|default:'—' }}</dd></div>
     </dl>
   </div>
 </section>

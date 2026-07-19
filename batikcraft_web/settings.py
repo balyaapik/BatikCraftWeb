@@ -77,7 +77,7 @@ TEMPLATES = [
                 "core.ui_language.language_context",
             ],
         },
-    },
+    }
 ]
 WSGI_APPLICATION = "batikcraft_web.wsgi.application"
 ASGI_APPLICATION = "batikcraft_web.asgi.application"
@@ -126,6 +126,14 @@ BATIKCRAFT_CREDENTIAL_ENCRYPTION_KEY = os.getenv(
     "BATIKCRAFT_CREDENTIAL_ENCRYPTION_KEY",
     "",
 )
+BATIKCRAFT_MINT_NETWORK = os.getenv(
+    "BATIKCRAFT_MINT_NETWORK",
+    "BatikCraft Registry",
+).strip()
+BATIKCRAFT_MINT_CONTRACT_ADDRESS = os.getenv(
+    "BATIKCRAFT_MINT_CONTRACT_ADDRESS",
+    "",
+).strip()
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "core.User"
