@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ settlement.invoice_number }} — BatikCraft{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/settlement.css' %}">{% endblock %}
+{% block content %}
+<section class="settlement-page section-pad">
+  <div class="settlement-heading">
+    <div><span class="eyebrow">Penyelesaian Lelang</span><h1>{{ settlement.invoice_number }}</h1><p>{{ settlement.nft.title }} · Creator {{ settlement.creator.public_name }} · Buyer {{ settlement.buyer.public_name }}</p></div>
+    <span class="settlement-status status-{{ settlement.status }}">{{ settlement.get_status_display }}</span>
+  </div>
+  <div class="settlement-grid">
+    <article class="settlement-card"><h2>Ringkasan transaksi</h2><dl>
+      <div><dt>NFT</dt><dd><a href="{% url 'nft_detail' settlement.nft.pk %}">{{ settlement.nft.title }}</a></dd></div>
+      <div><dt>Bid pemenang</dt><dd>Rp{{ settlement.amount|floatformat:0 }}</dd></div>
+      <div><dt>Metode</dt><dd>{{ settlement.get_payment_method_display }}</dd></div>
+      <div><dt>Batas pembayaran</dt><dd>{{ settlement.payment_due_at|date:'d M Y, H:i' }}</dd></div>
+    </dl></article>
+    <article class="settlement-card"><h2>Status proses</h2><ol class="settlement-timeline">
+      <li class="done"><strong>Invoice dibuat</strong><span>{{ settlement.created_at|date:'d M Y, H:i' }}</span></li>
+      <li class="{% if settlement.accepted_at %}done{% endif %}"><strong>Buyer menyetujui</strong><span>{{ settlement.accepted_at|date:'d M Y, H:i'|default:'Menunggu' }}</span></li>
+      <li class="{% if settlement.payment_submitted_at %}done{% endif %}"><strong>Pembayaran diajukan</strong><span>{{ settlement.payment_submitted_at|date:'d M Y, H:i'|default:'Menunggu' }}</span></li>
+      <li class="{% if settlement.paid_at %}done{% endif %}"><strong>Pembayaran terverifikasi</strong><span>{{ settlement.paid_at|date:'d M Y, H:i'|default:'Menunggu' }}</span></li>
+      <li class="{% if settlement.minted_at %}done{% endif %}"><strong>NFT diterbitkan</strong><span>{{ settlement.minted_at|date:'d M Y, H:i'|default:'Menunggu' }}</span></li>
+    </ol></article>
+  </div>
+  {% if settlement.review_note %}<div class="settlement-alert warning"><strong>Catatan pemeriksaan:</strong> {{ settlement.review_note }}</div>{% endif %}
+  {% if settlement.status == 'invoiced' and user.id == settlement.buyer_id %}
+  <article class="settlement-card"><h2>Persetujuan pemenang</h2><p>Periksa nilai bid dan metode pembayaran sebelum melanjutkan.</p><div class="settlement-actions">
+    <form method="post" action="{% url 'accept_auction_invoice' settlement.public_id %}">{% csrf_token %}<button class="btn btn-primary" type="submit">Setujui dan lanjut bayar</button></form>
+    <form method="post" action="{% url 'decline_auction_invoice' settlement.public_id %}">{% csrf_token %}<input type="text" name="buyer_note" placeholder="Alasan penolakan (opsional)"><button class="btn btn-ghost" type="submit">Tolak invoice</button></form>
+  </div></article>
+  {% endif %}
+  {% if settlement.status == 'accepted' and user.id == settlement.buyer_id %}
+  <div class="settlement-grid">
+    <article class="settlement-card"><h2>Instruksi pembayaran</h2><div class="payment-instructions">{{ settlement.payment_instructions|linebreaksbr }}</div><p class="settlement-muted">Bukti pembayaran hanya dapat dibuka oleh buyer, creator, dan administrator.</p></article>
+    <article class="settlement-card"><h2>Kirim bukti pembayaran</h2><form class="settlement-form" method="post" enctype="multipart/form-data" action="{% url 'submit_auction_payment' settlement.public_id %}">{% csrf_token %}{{ payment_form.as_p }}<button class="btn btn-primary" type="submit">Kirim untuk diverifikasi</button></form></article>
+  </div>
+  {% endif %}
+  {% if settlement.payment_submitted_at %}<article class="settlement-card"><h2>Data pembayaran</h2><dl>
+    <div><dt>Referensi</dt><dd>{{ settlement.payment_reference|default:'—' }}</dd></div>
+    <div><dt>Catatan buyer</dt><dd>{{ settlement.buyer_note|default:'—' }}</dd></div>
+    <div><dt>Bukti</dt><dd>{% if settlement.payment_proof %}<a href="{% url 'settlement_payment_proof' settlement.public_id %}" target="_blank" rel="noopener">Buka bukti pembayaran</a>{% else %}—{% endif %}</dd></div>
+  </dl></article>{% endif %}
+  {% if settlement.status == 'payment_submitted' and user.id == settlement.creator_id %}
+  <article class="settlement-card"><h2>Verifikasi creator</h2><p>Pastikan dana benar-benar sudah masuk. Verifikasi akan menerbitkan NFT dan memasukkannya ke akun buyer.</p><div class="settlement-actions">
+    <form method="post" action="{% url 'verify_auction_payment' settlement.public_id %}">{% csrf_token %}<button class="btn btn-primary" type="submit">Pembayaran diterima & mint NFT</button></form>
+    <form method="post" action="{% url 'reject_auction_payment' settlement.public_id %}">{% csrf_token %}<input type="text" name="review_note" required placeholder="Alasan bukti belum dapat diterima"><button class="btn btn-ghost" type="submit">Minta perbaikan</button></form>
+  </div></article>
+  {% endif %}
+  {% if settlement.status == 'minted' %}<article class="settlement-card settlement-complete"><span class="eyebrow">Transaksi selesai</span><h2>NFT telah masuk ke akun {{ settlement.buyer.public_name }}</h2><dl>
+    <div><dt>Token ID</dt><dd><code>{{ settlement.nft.token_id }}</code></dd></div>
+    <div><dt>Registry / jaringan</dt><dd>{{ settlement.nft.blockchain }}</dd></div>
+    <div><dt>Referensi mint</dt><dd><code>{{ settlement.mint_reference }}</code></dd></div>
+    <div><dt>Wallet tujuan</dt><dd>{{ settlement.minted_to_wallet|default:'Kepemilikan internal akun BatikCraft' }}</dd></div>
+  </dl></article>{% endif %}
+</section>
+{% endblock %}

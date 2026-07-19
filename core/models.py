@@ -1,4 +1,5 @@
 from decimal import Decimal
+import uuid
 
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
@@ -52,6 +53,7 @@ class NFTAsset(models.Model):
     class Status(models.TextChoices):
         DRAFT = "draft", "Draft"
         LISTED = "listed", "Listed"
+        AWAITING_PAYMENT = "awaiting_payment", "Awaiting payment"
         SOLD = "sold", "Sold"
         ARCHIVED = "archived", "Archived"
 
@@ -59,6 +61,15 @@ class NFTAsset(models.Model):
         User,
         on_delete=models.CASCADE,
         related_name="nfts",
+        help_text="Creator asli NFT. Kepemilikan buyer disimpan di current_owner.",
+    )
+    current_owner = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name="owned_nfts",
+        blank=True,
+        null=True,
+        help_text="Buyer yang menerima NFT setelah pembayaran dan mint selesai.",
     )
     title = models.CharField(max_length=160)
     description = models.TextField(blank=True)
@@ -78,8 +89,9 @@ class NFTAsset(models.Model):
     token_id = models.CharField(max_length=128, blank=True)
     blockchain = models.CharField(max_length=64, blank=True)
     contract_address = models.CharField(max_length=128, blank=True)
+    minted_at = models.DateTimeField(blank=True, null=True)
     status = models.CharField(
-        max_length=16,
+        max_length=24,
         choices=Status.choices,
         default=Status.DRAFT,
         db_index=True,
@@ -139,6 +151,21 @@ class NFTAsset(models.Model):
             return False
         return True
 
+    @property
+    def auction_has_ended(self):
+        return bool(self.auction_ends_at and timezone.now() >= self.auction_ends_at)
+
+    @property
+    def reserve_met(self):
+        highest = self.highest_bid
+        if highest is None:
+            return False
+        return self.reserve_price is None or highest.amount >= self.reserve_price
+
+    @property
+    def collector(self):
+        return self.current_owner
+
     def clean(self):
         if self.starting_price < 0:
             raise ValidationError(
@@ -174,6 +201,116 @@ class Bid(models.Model):
 
     def __str__(self):
         return f"{self.bidder.public_name} — {self.amount}"
+
+
+class AuctionSettlement(models.Model):
+    class Status(models.TextChoices):
+        INVOICED = "invoiced", "Menunggu persetujuan buyer"
+        ACCEPTED = "accepted", "Menunggu pembayaran"
+        PAYMENT_SUBMITTED = "payment_submitted", "Pembayaran diajukan"
+        MINTED = "minted", "Lunas dan NFT diterbitkan"
+        DECLINED = "declined", "Ditolak buyer"
+        EXPIRED = "expired", "Kedaluwarsa"
+        CANCELLED = "cancelled", "Dibatalkan"
+
+    class PaymentMethod(models.TextChoices):
+        BANK_TRANSFER = "bank_transfer", "Transfer bank"
+        E_WALLET = "e_wallet", "Dompet digital"
+        OTHER = "other", "Metode lain"
+
+    public_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    invoice_number = models.CharField(max_length=40, unique=True, blank=True)
+    nft = models.OneToOneField(
+        NFTAsset,
+        on_delete=models.PROTECT,
+        related_name="settlement",
+    )
+    winning_bid = models.OneToOneField(
+        Bid,
+        on_delete=models.PROTECT,
+        related_name="settlement",
+    )
+    creator = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="auction_sales",
+    )
+    buyer = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="auction_purchases",
+    )
+    amount = models.DecimalField(max_digits=18, decimal_places=2)
+    status = models.CharField(
+        max_length=24,
+        choices=Status.choices,
+        default=Status.INVOICED,
+        db_index=True,
+    )
+    payment_method = models.CharField(
+        max_length=24,
+        choices=PaymentMethod.choices,
+        default=PaymentMethod.BANK_TRANSFER,
+    )
+    payment_instructions = models.TextField()
+    payment_due_at = models.DateTimeField(db_index=True)
+    payment_reference = models.CharField(max_length=160, blank=True)
+    payment_proof = models.FileField(
+        upload_to="payment-proofs/%Y/%m/",
+        blank=True,
+        null=True,
+    )
+    buyer_note = models.TextField(blank=True)
+    review_note = models.TextField(blank=True)
+    mint_reference = models.CharField(max_length=80, blank=True, unique=True, null=True)
+    minted_to_wallet = models.CharField(max_length=128, blank=True)
+    accepted_at = models.DateTimeField(blank=True, null=True)
+    payment_submitted_at = models.DateTimeField(blank=True, null=True)
+    paid_at = models.DateTimeField(blank=True, null=True)
+    minted_at = models.DateTimeField(blank=True, null=True)
+    declined_at = models.DateTimeField(blank=True, null=True)
+    cancelled_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.invoice_number or str(self.public_id)
+
+    def save(self, *args, **kwargs):
+        if not self.invoice_number:
+            date_part = timezone.now().strftime("%Y%m%d")
+            self.invoice_number = f"BCINV-{date_part}-{uuid.uuid4().hex[:10].upper()}"
+        super().save(*args, **kwargs)
+
+    @property
+    def is_expired(self):
+        return (
+            self.status in {self.Status.INVOICED, self.Status.ACCEPTED}
+            and timezone.now() >= self.payment_due_at
+        )
+
+    @property
+    def is_complete(self):
+        return self.status == self.Status.MINTED
+
+    def clean(self):
+        errors = {}
+        if self.winning_bid_id and self.nft_id:
+            if self.winning_bid.nft_id != self.nft_id:
+                errors["winning_bid"] = "Bid pemenang harus berasal dari NFT yang sama."
+        if self.winning_bid_id and self.buyer_id:
+            if self.winning_bid.bidder_id != self.buyer_id:
+                errors["buyer"] = "Buyer harus sama dengan bidder pemenang."
+        if self.nft_id and self.creator_id:
+            if self.nft.owner_id != self.creator_id:
+                errors["creator"] = "Creator harus sama dengan pemilik awal NFT."
+        if self.amount is not None and self.amount <= 0:
+            errors["amount"] = "Nilai invoice harus lebih dari nol."
+        if errors:
+            raise ValidationError(errors)
 
 
 class ModelAsset(models.Model):

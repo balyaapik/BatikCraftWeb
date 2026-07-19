@@ -4,7 +4,7 @@ from django import forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 
 from .captcha import issue_captcha, verify_captcha
-from .models import Bid, ModelAsset, NFTAsset, User
+from .models import AuctionSettlement, Bid, ModelAsset, NFTAsset, User
 
 
 def _captcha_field() -> forms.CharField:
@@ -132,6 +132,76 @@ class BidForm(forms.ModelForm):
         widgets = {
             "amount": forms.NumberInput(attrs={"step": "0.01", "min": "0"})
         }
+
+
+class AuctionInvoiceForm(forms.Form):
+    payment_method = forms.ChoiceField(
+        label="Metode pembayaran",
+        choices=AuctionSettlement.PaymentMethod.choices,
+    )
+    payment_due_hours = forms.IntegerField(
+        label="Batas pembayaran",
+        min_value=1,
+        max_value=168,
+        initial=48,
+        help_text="Jumlah jam sejak invoice dikirim. Maksimal 7 hari.",
+    )
+    payment_instructions = forms.CharField(
+        label="Instruksi pembayaran",
+        widget=forms.Textarea(
+            attrs={
+                "rows": 6,
+                "placeholder": (
+                    "Contoh: Transfer ke rekening ..., atas nama ..., "
+                    "lalu unggah bukti pembayaran pada halaman invoice."
+                ),
+            }
+        ),
+    )
+
+
+class PaymentSubmissionForm(forms.ModelForm):
+    class Meta:
+        model = AuctionSettlement
+        fields = (
+            "payment_reference",
+            "payment_proof",
+            "buyer_note",
+        )
+        labels = {
+            "payment_reference": "Nomor referensi pembayaran",
+            "payment_proof": "Bukti pembayaran",
+            "buyer_note": "Catatan untuk creator",
+        }
+        widgets = {
+            "buyer_note": forms.Textarea(attrs={"rows": 4}),
+        }
+
+    def clean_payment_proof(self):
+        value = self.cleaned_data.get("payment_proof")
+        if value is None:
+            return value
+        suffix = Path(value.name).suffix.casefold()
+        if suffix not in {".jpg", ".jpeg", ".png", ".webp", ".pdf"}:
+            raise forms.ValidationError(
+                "Bukti pembayaran harus berupa JPG, PNG, WEBP, atau PDF."
+            )
+        if value.size > 10 * 1024 * 1024:
+            raise forms.ValidationError(
+                "Ukuran bukti pembayaran maksimal 10 MB."
+            )
+        return value
+
+    def clean(self):
+        cleaned = super().clean()
+        reference = str(cleaned.get("payment_reference") or "").strip()
+        proof = cleaned.get("payment_proof")
+        existing_proof = getattr(self.instance, "payment_proof", None)
+        if not reference and not proof and not existing_proof:
+            raise forms.ValidationError(
+                "Isi nomor referensi atau unggah bukti pembayaran."
+            )
+        return cleaned
 
 
 class ModelAssetForm(forms.ModelForm):

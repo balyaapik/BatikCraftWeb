@@ -20,7 +20,13 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import ModelAsset, ModelPurchase, NFTAsset, User
+from .models import (
+    AuctionSettlement,
+    ModelAsset,
+    ModelPurchase,
+    NFTAsset,
+    User,
+)
 from .serializers import (
     BidSerializer,
     ModelAssetSerializer,
@@ -63,18 +69,24 @@ def _store_uploaded_package(nft: NFTAsset, upload) -> None:
         raise serializers.ValidationError(
             {
                 "package_file": (
-                    "Paket sumber harus memakai ekstensi .batikcraftnft atau .batikpack."
+                    "Paket sumber harus memakai ekstensi .batikcraftnft atau "
+                    ".batikpack."
                 )
             }
         )
     max_size = int(
-        getattr(settings, "BATIKCRAFT_MAX_PACKAGE_UPLOAD_SIZE", _DEFAULT_MAX_PACKAGE_SIZE)
+        getattr(
+            settings,
+            "BATIKCRAFT_MAX_PACKAGE_UPLOAD_SIZE",
+            _DEFAULT_MAX_PACKAGE_SIZE,
+        )
     )
     if upload.size > max_size:
         raise serializers.ValidationError(
             {
                 "package_file": (
-                    f"Ukuran paket melebihi batas {max_size // (1024 * 1024)} MB."
+                    f"Ukuran paket melebihi batas "
+                    f"{max_size // (1024 * 1024)} MB."
                 )
             }
         )
@@ -106,18 +118,20 @@ def _store_uploaded_package(nft: NFTAsset, upload) -> None:
 
 
 def _can_download_package(nft: NFTAsset, user) -> bool:
+    """Only the creator or the paid, minted owner may download source files."""
+
     if not user or not user.is_authenticated or not _package_storage_name(nft):
         return False
     if user.is_superuser or nft.owner_id == user.id:
         return True
-
-    auction_closed = nft.status == NFTAsset.Status.SOLD or (
-        nft.auction_ends_at is not None and timezone.now() >= nft.auction_ends_at
-    )
-    if not auction_closed:
+    if nft.status != NFTAsset.Status.SOLD or nft.current_owner_id != user.id:
         return False
-    winner = nft.highest_bid
-    return winner is not None and winner.bidder_id == user.id
+    settlement = getattr(nft, "settlement", None)
+    return bool(
+        settlement
+        and settlement.status == AuctionSettlement.Status.MINTED
+        and settlement.buyer_id == user.id
+    )
 
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
@@ -158,7 +172,7 @@ class StudioCapabilitiesView(APIView):
     def get(self, request):
         return Response(
             {
-                "api_version": "1.1",
+                "api_version": "1.2",
                 "minimum_studio_version": "0.2.0",
                 "authentication": "token",
                 "pagination": "page-number",
@@ -176,6 +190,10 @@ class StudioCapabilitiesView(APIView):
                     "profile": True,
                     "nft_marketplace": True,
                     "nft_bidding": True,
+                    "nft_auction_settlement": True,
+                    "nft_payment_verification": True,
+                    "nft_registry_mint": True,
+                    "nft_owned_library": True,
                     "nft_source_package_upload": True,
                     "nft_source_package_download": True,
                     "model_marketplace": True,
@@ -207,7 +225,14 @@ class NFTAssetViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
 
     def get_queryset(self):
-        qs = NFTAsset.objects.select_related("owner").prefetch_related("bids")
+        qs = (
+            NFTAsset.objects.select_related(
+                "owner",
+                "current_owner",
+                "settlement",
+            )
+            .prefetch_related("bids")
+        )
         user = self.request.user
         if user.is_superuser:
             return qs
@@ -215,7 +240,10 @@ class NFTAssetViewSet(viewsets.ModelViewSet):
             return qs.filter(
                 Q(owner=user) | Q(status=NFTAsset.Status.LISTED)
             )
-        return qs.filter(status=NFTAsset.Status.LISTED)
+        return qs.filter(
+            Q(status=NFTAsset.Status.LISTED)
+            | Q(current_owner=user, status=NFTAsset.Status.SOLD)
+        )
 
     def perform_create(self, serializer):
         if not _is_creator(self.request.user):
@@ -247,6 +275,19 @@ class NFTAssetViewSet(viewsets.ModelViewSet):
                 {"detail": "Hanya pemilik yang dapat mempublikasikan NFT."},
                 status=status.HTTP_403_FORBIDDEN,
             )
+        if nft.status in {
+            NFTAsset.Status.AWAITING_PAYMENT,
+            NFTAsset.Status.SOLD,
+        }:
+            return Response(
+                {
+                    "detail": (
+                        "NFT yang sedang ditagihkan atau sudah terjual tidak "
+                        "dapat dipublikasikan ulang."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         if nft.starting_price <= Decimal("0"):
             return Response(
                 {"starting_price": "Harga awal harus lebih dari nol."},
@@ -257,9 +298,14 @@ class NFTAssetViewSet(viewsets.ModelViewSet):
                 {"image": "Unggah image atau isi image_url."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if (nft.metadata or {}).get("source_type") == "asset_library" and not _package_storage_name(nft):
+        source_type = (nft.metadata or {}).get("source_type")
+        if source_type == "asset_library" and not _package_storage_name(nft):
             return Response(
-                {"package_file": "Pustaka aset wajib menyertakan file .batikpack."},
+                {
+                    "package_file": (
+                        "Pustaka aset wajib menyertakan file .batikpack."
+                    )
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
         nft.status = NFTAsset.Status.LISTED
@@ -291,15 +337,19 @@ class NFTAssetViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"], url_path="package")
     def package(self, request, pk=None):
         nft = get_object_or_404(
-            NFTAsset.objects.select_related("owner").prefetch_related("bids"),
+            NFTAsset.objects.select_related(
+                "owner",
+                "current_owner",
+                "settlement",
+            ).prefetch_related("bids"),
             pk=pk,
         )
         if not _can_download_package(nft, request.user):
             return Response(
                 {
                     "detail": (
-                        "Paket hanya dapat diunduh oleh pemilik atau pemenang auction "
-                        "setelah auction berakhir."
+                        "Paket hanya dapat diunduh creator atau buyer setelah "
+                        "pembayaran terverifikasi dan NFT selesai diterbitkan."
                     )
                 },
                 status=status.HTTP_403_FORBIDDEN,
@@ -315,10 +365,14 @@ class NFTAssetViewSet(viewsets.ModelViewSet):
             default_storage.open(storage_name, "rb"),
             as_attachment=True,
             filename=str(record.get("filename") or Path(storage_name).name),
-            content_type=str(record.get("content_type") or "application/octet-stream"),
+            content_type=str(
+                record.get("content_type") or "application/octet-stream"
+            ),
         )
         response["X-BatikCraft-NFT-ID"] = str(nft.pk)
-        response["X-BatikCraft-Package-SHA256"] = str(record.get("sha256") or "")
+        response["X-BatikCraft-Package-SHA256"] = str(
+            record.get("sha256") or ""
+        )
         return response
 
 
@@ -398,7 +452,9 @@ class ModelAssetViewSet(viewsets.ModelViewSet):
         )
         return Response(
             serializer.data,
-            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+            status=(
+                status.HTTP_201_CREATED if created else status.HTTP_200_OK
+            ),
         )
 
     @action(detail=True, methods=["get"])

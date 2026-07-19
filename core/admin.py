@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
 from .models import (
+    AuctionSettlement,
     Bid,
     BlogPost,
     ModelAsset,
@@ -39,14 +40,17 @@ class NFTAssetAdmin(admin.ModelAdmin):
     list_display = (
         "title",
         "owner",
+        "current_owner",
         "status",
         "starting_price",
+        "minted_at",
         "created_at",
     )
     list_filter = ("status", "blockchain")
     search_fields = (
         "title",
         "owner__username",
+        "current_owner__username",
         "source_project_id",
         "token_id",
     )
@@ -56,6 +60,39 @@ class NFTAssetAdmin(admin.ModelAdmin):
 class BidAdmin(admin.ModelAdmin):
     list_display = ("nft", "bidder", "amount", "created_at")
     search_fields = ("nft__title", "bidder__username")
+
+
+@admin.register(AuctionSettlement)
+class AuctionSettlementAdmin(admin.ModelAdmin):
+    list_display = (
+        "invoice_number",
+        "nft",
+        "creator",
+        "buyer",
+        "amount",
+        "status",
+        "payment_due_at",
+        "minted_at",
+    )
+    list_filter = ("status", "payment_method")
+    search_fields = (
+        "invoice_number",
+        "nft__title",
+        "creator__username",
+        "buyer__username",
+        "payment_reference",
+        "mint_reference",
+    )
+    readonly_fields = (
+        "public_id",
+        "invoice_number",
+        "accepted_at",
+        "payment_submitted_at",
+        "paid_at",
+        "minted_at",
+        "created_at",
+        "updated_at",
+    )
 
 
 @admin.register(ModelAsset)
