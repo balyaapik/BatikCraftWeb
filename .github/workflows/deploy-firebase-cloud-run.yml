@@ -36,10 +36,12 @@ jobs:
       - name: Validate deployment configuration
         env:
           PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          RUNTIME_SERVICE_ACCOUNT: ${{ vars.GCP_RUNTIME_SERVICE_ACCOUNT }}
           WIF_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           DEPLOYER_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
         run: |
           test -n "$PROJECT_ID" || { echo "Missing repository variable GCP_PROJECT_ID"; exit 1; }
+          test -n "$RUNTIME_SERVICE_ACCOUNT" || { echo "Missing repository variable GCP_RUNTIME_SERVICE_ACCOUNT"; exit 1; }
           test -n "$WIF_PROVIDER" || { echo "Missing secret GCP_WORKLOAD_IDENTITY_PROVIDER"; exit 1; }
           test -n "$DEPLOYER_SERVICE_ACCOUNT" || { echo "Missing secret GCP_SERVICE_ACCOUNT"; exit 1; }
 
@@ -96,12 +98,14 @@ jobs:
         if: ${{ inputs.run_migrations }}
         env:
           PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          RUNTIME_SERVICE_ACCOUNT: ${{ vars.GCP_RUNTIME_SERVICE_ACCOUNT }}
           IMAGE: ${{ steps.image.outputs.uri }}
         run: |
           gcloud run jobs deploy "$MIGRATION_JOB" \
             --project "$PROJECT_ID" \
             --region "$REGION" \
             --image "$IMAGE" \
+            --service-account "$RUNTIME_SERVICE_ACCOUNT" \
             --command python \
             --args manage.py,migrate \
             --tasks 1 \
@@ -120,12 +124,14 @@ jobs:
       - name: Deploy Django to Cloud Run
         env:
           PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          RUNTIME_SERVICE_ACCOUNT: ${{ vars.GCP_RUNTIME_SERVICE_ACCOUNT }}
           IMAGE: ${{ steps.image.outputs.uri }}
         run: |
           gcloud run deploy "$SERVICE" \
             --project "$PROJECT_ID" \
             --region "$REGION" \
             --image "$IMAGE" \
+            --service-account "$RUNTIME_SERVICE_ACCOUNT" \
             --allow-unauthenticated \
             --port 8080 \
             --cpu 1 \
