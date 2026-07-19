@@ -11,3 +11,5 @@ htmlcov/
 .pytest_cache/
 .ruff_cache/
 .DS_Store
+gha-creds-*.json
+.firebaserc
