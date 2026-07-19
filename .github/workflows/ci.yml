@@ -19,7 +19,9 @@ jobs:
       - name: Check for missing migrations
         run: python manage.py makemigrations --check --dry-run
       - name: Run Django tests
-        run: python manage.py test 2>&1 | tee django-test.log
+        run: |
+          set -o pipefail
+          python manage.py test 2>&1 | tee django-test.log
       - name: Upload Django test log on failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -55,8 +57,17 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install MySQL build dependencies
-        run: sudo apt-get update && sudo apt-get install -y default-libmysqlclient-dev pkg-config
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq default-libmysqlclient-dev pkg-config
       - run: pip install -q -r requirements-mysql.txt
       - run: python manage.py migrate --noinput
       - run: python manage.py check --database default
-      - run: python manage.py test
+      - name: Run Django tests on MySQL
+        run: |
+          set -o pipefail
+          python manage.py test 2>&1 | tee mysql-test.log
+      - name: Upload MySQL test log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mysql-test-log-${{ github.run_id }}
+          path: mysql-test.log
