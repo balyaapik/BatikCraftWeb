@@ -114,10 +114,6 @@ class StorageConfiguration(models.Model):
                 errors["account_id"] = "Account ID wajib diisi saat R2 diaktifkan."
             if not self.access_key_id:
                 errors["access_key_id"] = "Access Key ID wajib diisi saat R2 diaktifkan."
-            if not self.has_secret_access_key:
-                errors["secret_access_key_ciphertext"] = (
-                    "Secret Access Key wajib disimpan saat R2 diaktifkan."
-                )
             if not self.bucket_name:
                 errors["bucket_name"] = "Nama bucket wajib diisi saat R2 diaktifkan."
         if self.use_signed_urls and self.custom_domain:
@@ -136,8 +132,11 @@ class StorageConfiguration(models.Model):
     def save(self, *args, **kwargs):
         self.singleton_id = 1
         self.location_prefix = self.location_prefix.strip("/")
-        self.custom_domain = self.custom_domain.strip().removeprefix("https://").removeprefix(
-            "http://"
-        ).rstrip("/")
+        self.custom_domain = (
+            self.custom_domain.strip()
+            .removeprefix("https://")
+            .removeprefix("http://")
+            .rstrip("/")
+        )
         self.endpoint_override = self.endpoint_override.rstrip("/")
         super().save(*args, **kwargs)
