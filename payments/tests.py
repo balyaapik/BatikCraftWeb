@@ -14,6 +14,7 @@ from .models import PaymentGatewayAttempt, PaymentGatewayEvent
 
 
 @override_settings(
+    SECURE_SSL_REDIRECT=False,
     MIDTRANS_ENABLED=True,
     MIDTRANS_IS_PRODUCTION=False,
     MIDTRANS_SERVER_KEY="SB-Mid-server-test-key",
