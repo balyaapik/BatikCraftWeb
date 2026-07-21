@@ -64,8 +64,14 @@ class PaymentGatewayAttempt(models.Model):
     class Meta:
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["settlement", "status"]),
-            models.Index(fields=["provider", "order_id"]),
+            models.Index(
+                fields=["settlement", "status"],
+                name="payments_pa_settlem_721d18_idx",
+            ),
+            models.Index(
+                fields=["provider", "order_id"],
+                name="payments_pa_provide_c67606_idx",
+            ),
         ]
 
     def __str__(self):
