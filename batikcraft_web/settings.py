@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "storages",
     "storage_config.apps.StorageConfigConfig",
     "core",
+    "payments.apps.PaymentsConfig",
 ]
 
 MIDDLEWARE = [
@@ -75,6 +76,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "core.ui_language.language_context",
+                "payments.context_processors.payment_gateway_context",
             ],
         },
     }
@@ -134,6 +136,29 @@ BATIKCRAFT_MINT_CONTRACT_ADDRESS = os.getenv(
     "BATIKCRAFT_MINT_CONTRACT_ADDRESS",
     "",
 ).strip()
+
+MIDTRANS_ENABLED = env_flag("MIDTRANS_ENABLED", "False")
+MIDTRANS_IS_PRODUCTION = env_flag("MIDTRANS_IS_PRODUCTION", "False")
+MIDTRANS_SERVER_KEY = os.getenv("MIDTRANS_SERVER_KEY", "").strip()
+MIDTRANS_CLIENT_KEY = os.getenv("MIDTRANS_CLIENT_KEY", "").strip()
+MIDTRANS_MERCHANT_ID = os.getenv("MIDTRANS_MERCHANT_ID", "").strip()
+MIDTRANS_HTTP_TIMEOUT = int(os.getenv("MIDTRANS_HTTP_TIMEOUT", "15"))
+MIDTRANS_ALLOWED_PAYMENTS = [
+    method.strip()
+    for method in os.getenv(
+        "MIDTRANS_ALLOWED_PAYMENTS",
+        "qris,gopay,shopeepay,bca_va,bni_va,bri_va,echannel,permata_va",
+    ).split(",")
+    if method.strip()
+]
+if (
+    MIDTRANS_ENABLED
+    and MIDTRANS_IS_PRODUCTION
+    and MIDTRANS_SERVER_KEY.startswith("SB-")
+):
+    raise ImproperlyConfigured(
+        "Mode produksi Midtrans tidak boleh memakai Sandbox Server Key."
+    )
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "core.User"
