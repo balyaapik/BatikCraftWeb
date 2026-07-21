@@ -4,6 +4,7 @@
 {% block extra_head %}<link rel="stylesheet" href="{% static 'css/settlement.css' %}">{% endblock %}
 {% block content %}
 <section class="settlement-page section-pad">
+  {% with attempt=settlement.gateway_attempts.first %}
   <div class="settlement-heading">
     <div><span class="eyebrow">Penyelesaian Lelang</span><h1>{{ settlement.invoice_number }}</h1><p>{{ settlement.nft.title }} · Creator {{ settlement.creator.public_name }} · Buyer {{ settlement.buyer.public_name }}</p></div>
     <span class="settlement-status status-{{ settlement.status }}">{{ settlement.get_status_display }}</span>
@@ -12,14 +13,15 @@
     <article class="settlement-card"><h2>Ringkasan transaksi</h2><dl>
       <div><dt>NFT</dt><dd><a href="{% url 'nft_detail' settlement.nft.pk %}">{{ settlement.nft.title }}</a></dd></div>
       <div><dt>Bid pemenang</dt><dd>Rp{{ settlement.amount|floatformat:0 }}</dd></div>
-      <div><dt>Metode</dt><dd>{{ settlement.get_payment_method_display }}</dd></div>
+      <div><dt>Metode</dt><dd>{% if attempt %}Midtrans · {{ attempt.payment_type|default:'Pilih di checkout' }}{% else %}{{ settlement.get_payment_method_display }}{% endif %}</dd></div>
       <div><dt>Batas pembayaran</dt><dd>{{ settlement.payment_due_at|date:'d M Y, H:i' }}</dd></div>
+      {% if attempt %}<div><dt>Order gateway</dt><dd><code>{{ attempt.order_id }}</code> · {{ attempt.get_status_display }}</dd></div>{% endif %}
     </dl></article>
     <article class="settlement-card"><h2>Status proses</h2><ol class="settlement-timeline">
       <li class="done"><strong>Invoice dibuat</strong><span>{{ settlement.created_at|date:'d M Y, H:i' }}</span></li>
       <li class="{% if settlement.accepted_at %}done{% endif %}"><strong>Buyer menyetujui</strong><span>{{ settlement.accepted_at|date:'d M Y, H:i'|default:'Menunggu' }}</span></li>
-      <li class="{% if settlement.payment_submitted_at %}done{% endif %}"><strong>Pembayaran diajukan</strong><span>{{ settlement.payment_submitted_at|date:'d M Y, H:i'|default:'Menunggu' }}</span></li>
-      <li class="{% if settlement.paid_at %}done{% endif %}"><strong>Pembayaran terverifikasi</strong><span>{{ settlement.paid_at|date:'d M Y, H:i'|default:'Menunggu' }}</span></li>
+      <li class="{% if attempt %}done{% endif %}"><strong>Checkout gateway</strong><span>{% if attempt %}{{ attempt.get_status_display }}{% else %}Menunggu{% endif %}</span></li>
+      <li class="{% if settlement.paid_at %}done{% endif %}"><strong>Pembayaran terverifikasi</strong><span>{{ settlement.paid_at|date:'d M Y, H:i'|default:'Menunggu webhook' }}</span></li>
       <li class="{% if settlement.minted_at %}done{% endif %}"><strong>NFT diterbitkan</strong><span>{{ settlement.minted_at|date:'d M Y, H:i'|default:'Menunggu' }}</span></li>
     </ol></article>
   </div>
@@ -31,15 +33,37 @@
   </div></article>
   {% endif %}
   {% if settlement.status == 'accepted' and user.id == settlement.buyer_id %}
-  <div class="settlement-grid">
-    <article class="settlement-card"><h2>Instruksi pembayaran</h2><div class="payment-instructions">{{ settlement.payment_instructions|linebreaksbr }}</div><p class="settlement-muted">Bukti pembayaran hanya dapat dibuka oleh buyer, creator, dan administrator.</p></article>
-    <article class="settlement-card"><h2>Kirim bukti pembayaran</h2><form class="settlement-form" method="post" enctype="multipart/form-data" action="{% url 'submit_auction_payment' settlement.public_id %}">{% csrf_token %}{{ payment_form.as_p }}<button class="btn btn-primary" type="submit">Kirim untuk diverifikasi</button></form></article>
-  </div>
+  <article class="settlement-card gateway-card">
+    <span class="eyebrow">Pembayaran real-time</span>
+    <h2>Bayar melalui QRIS, dompet digital, atau virtual account</h2>
+    {% if attempt and attempt.status == 'pending' %}
+      <p>Checkout Midtrans sudah aktif. Pembayaran akan diverifikasi otomatis melalui webhook dan pemeriksaan status langsung ke Midtrans.</p>
+      <div class="settlement-actions">
+        <a class="btn btn-primary" href="{{ attempt.redirect_url }}" rel="nofollow">Lanjutkan pembayaran</a>
+        <form method="post" action="{% url 'payments:sync_status' settlement.public_id %}">{% csrf_token %}<button class="btn btn-ghost" type="submit">Sinkronkan status</button></form>
+      </div>
+    {% elif attempt and attempt.status == 'created' %}
+      <p>Checkout sedang disiapkan. Muat ulang halaman beberapa saat lagi.</p>
+    {% else %}
+      {% if midtrans_enabled %}
+      <p>Metode yang tersedia mengikuti kanal yang aktif pada akun merchant Midtrans. BatikCraft tidak pernah meminta PIN, OTP, atau kata sandi dompet digital.</p>
+      <form method="post" action="{% url 'payments:start_checkout' settlement.public_id %}">{% csrf_token %}<button class="btn btn-primary" type="submit">Buka checkout otomatis</button></form>
+      {% else %}
+      <div class="settlement-alert warning">Gateway belum diaktifkan administrator. Pembayaran manual masih tersedia sebagai fallback.</div>
+      {% endif %}
+    {% endif %}
+  </article>
+  {% if not attempt or attempt.status == 'failed' or attempt.status == 'expired' or attempt.status == 'cancelled' %}
+  <details class="settlement-card manual-fallback"><summary>Gunakan pembayaran manual</summary><div class="settlement-grid compact-grid">
+    <article><h2>Instruksi pembayaran</h2><div class="payment-instructions">{{ settlement.payment_instructions|linebreaksbr }}</div><p class="settlement-muted">Bukti pembayaran hanya dapat dibuka oleh buyer, creator, dan administrator.</p></article>
+    <article><h2>Kirim bukti pembayaran</h2><form class="settlement-form" method="post" enctype="multipart/form-data" action="{% url 'submit_auction_payment' settlement.public_id %}">{% csrf_token %}{{ payment_form.as_p }}<button class="btn btn-primary" type="submit">Kirim untuk diverifikasi</button></form></article>
+  </div></details>
+  {% endif %}
   {% endif %}
   {% if settlement.payment_submitted_at %}<article class="settlement-card"><h2>Data pembayaran</h2><dl>
     <div><dt>Referensi</dt><dd>{{ settlement.payment_reference|default:'—' }}</dd></div>
     <div><dt>Catatan buyer</dt><dd>{{ settlement.buyer_note|default:'—' }}</dd></div>
-    <div><dt>Bukti</dt><dd>{% if settlement.payment_proof %}<a href="{% url 'settlement_payment_proof' settlement.public_id %}" target="_blank" rel="noopener">Buka bukti pembayaran</a>{% else %}—{% endif %}</dd></div>
+    <div><dt>Bukti</dt><dd>{% if settlement.payment_proof %}<a href="{% url 'settlement_payment_proof' settlement.public_id %}" target="_blank" rel="noopener">Buka bukti pembayaran</a>{% elif attempt %}Diverifikasi otomatis oleh gateway{% else %}—{% endif %}</dd></div>
   </dl></article>{% endif %}
   {% if settlement.status == 'payment_submitted' and user.id == settlement.creator_id %}
   <article class="settlement-card"><h2>Verifikasi creator</h2><p>Pastikan dana benar-benar sudah masuk. Verifikasi akan menerbitkan NFT dan memasukkannya ke akun buyer.</p><div class="settlement-actions">
@@ -50,8 +74,29 @@
   {% if settlement.status == 'minted' %}<article class="settlement-card settlement-complete"><span class="eyebrow">Transaksi selesai</span><h2>NFT telah masuk ke akun {{ settlement.buyer.public_name }}</h2><dl>
     <div><dt>Token ID</dt><dd><code>{{ settlement.nft.token_id }}</code></dd></div>
     <div><dt>Registry / jaringan</dt><dd>{{ settlement.nft.blockchain }}</dd></div>
+    <div><dt>Referensi pembayaran</dt><dd><code>{{ settlement.payment_reference }}</code></dd></div>
     <div><dt>Referensi mint</dt><dd><code>{{ settlement.mint_reference }}</code></dd></div>
     <div><dt>Wallet tujuan</dt><dd>{{ settlement.minted_to_wallet|default:'Kepemilikan internal akun BatikCraft' }}</dd></div>
   </dl></article>{% endif %}
+  {% if attempt and attempt.status == 'pending' %}
+  <script>
+  (() => {
+    const initialSettlement = "{{ settlement.status|escapejs }}";
+    const initialAttempt = "{{ attempt.status|escapejs }}";
+    const statusUrl = "{% url 'payments:settlement_status' settlement.public_id %}";
+    const poll = async () => {
+      try {
+        const response = await fetch(statusUrl, {headers: {"Accept": "application/json"}, credentials: "same-origin"});
+        if (!response.ok) return;
+        const data = await response.json();
+        const attemptStatus = data.attempt ? data.attempt.status : "";
+        if (data.settlement_status !== initialSettlement || attemptStatus !== initialAttempt) window.location.reload();
+      } catch (_) {}
+    };
+    window.setInterval(poll, 4000);
+  })();
+  </script>
+  {% endif %}
+  {% endwith %}
 </section>
 {% endblock %}
