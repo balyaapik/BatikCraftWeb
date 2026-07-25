@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "storages",
     "storage_config.apps.StorageConfigConfig",
     "core",
+    "payments",
 ]
 
 MIDDLEWARE = [
