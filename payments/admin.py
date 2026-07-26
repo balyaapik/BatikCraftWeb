@@ -1,11 +1,12 @@
 from django.contrib import admin
 
 from .models import (
+    CreatorPayout,
     PaymentGatewayAttempt,
     PaymentGatewayEvent,
     PaymentGatewaySetting,
 )
-from .models import CreatorPayout
+
 
 @admin.register(PaymentGatewayAttempt)
 class PaymentGatewayAttemptAdmin(admin.ModelAdmin):
@@ -29,8 +30,8 @@ class PaymentGatewayAttemptAdmin(admin.ModelAdmin):
     readonly_fields = (
         "public_id",
         "order_id",
-        "snap_token",
-        "redirect_url",
+        "invoice_id",
+        "invoice_url",
         "gateway_response",
         "created_at",
         "updated_at",

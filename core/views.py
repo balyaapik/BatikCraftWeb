@@ -4,10 +4,10 @@ Pages that anonymous visitors can open live in ``public_views`` and the
 authentication flow lives in ``auth_views``.
 """
 
+import uuid
 from datetime import timedelta
 from decimal import Decimal
 from pathlib import Path
-import uuid
 
 from django.conf import settings
 from django.contrib import messages
@@ -180,7 +180,7 @@ def nft_create(request):
 @require_POST
 def nft_publish(request, pk):
     nft = get_object_or_404(NFTAsset, pk=pk, owner=request.user)
-    if nft.starting_price <= Decimal("0"):
+    if nft.starting_price <= Decimal(0):
         messages.error(
             request,
             "Harga awal harus lebih dari nol sebelum NFT dipublikasikan.",

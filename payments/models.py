@@ -1,5 +1,5 @@
-from decimal import Decimal
 import uuid
+from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -10,7 +10,7 @@ from core.models import AuctionSettlement, User
 
 class PaymentGatewayAttempt(models.Model):
     class Provider(models.TextChoices):
-        MIDTRANS = "midtrans", "Midtrans"
+        XENDIT = "xendit", "Xendit"
 
     class Environment(models.TextChoices):
         SANDBOX = "sandbox", "Sandbox"
@@ -34,7 +34,7 @@ class PaymentGatewayAttempt(models.Model):
     provider = models.CharField(
         max_length=24,
         choices=Provider.choices,
-        default=Provider.MIDTRANS,
+        default=Provider.XENDIT,
     )
     environment = models.CharField(
         max_length=16,
@@ -49,11 +49,10 @@ class PaymentGatewayAttempt(models.Model):
         default=Status.CREATED,
         db_index=True,
     )
-    snap_token = models.CharField(max_length=160, blank=True)
-    redirect_url = models.URLField(max_length=600, blank=True)
+    invoice_id = models.CharField(max_length=120, blank=True, db_index=True)
+    invoice_url = models.URLField(max_length=600, blank=True)
     transaction_id = models.CharField(max_length=120, blank=True, db_index=True)
     payment_type = models.CharField(max_length=64, blank=True)
-    fraud_status = models.CharField(max_length=32, blank=True)
     gateway_status = models.CharField(max_length=32, blank=True)
     gateway_response = models.JSONField(default=dict, blank=True)
     expires_at = models.DateTimeField(blank=True, null=True, db_index=True)
@@ -87,7 +86,10 @@ class PaymentGatewayAttempt(models.Model):
         errors = {}
         if self.amount is not None and self.amount <= Decimal("0.00"):
             errors["amount"] = "Nilai pembayaran harus lebih dari nol."
-        if self.settlement_id and self.amount != self.settlement.amount:
+        # Only enforce the amount-match check on creation (pk is None).
+        # Existing records must remain editable (e.g. admin status corrections)
+        # even if the settlement amount was later adjusted.
+        if self.pk is None and self.settlement_id and self.amount != self.settlement.amount:
             errors["amount"] = "Nilai gateway harus sama dengan invoice lelang."
         if errors:
             raise ValidationError(errors)
@@ -116,12 +118,12 @@ class PaymentGatewayEvent(models.Model):
 
 class PaymentGatewaySetting(models.Model):
     class Provider(models.TextChoices):
-        MIDTRANS = "midtrans", "Midtrans"
+        XENDIT = "xendit", "Xendit"
 
     provider = models.CharField(
         max_length=24,
         choices=Provider.choices,
-        default=Provider.MIDTRANS,
+        default=Provider.XENDIT,
         unique=True,
     )
 
@@ -129,30 +131,21 @@ class PaymentGatewaySetting(models.Model):
 
     is_production = models.BooleanField(
         default=False,
-        help_text="Centang jika menggunakan Midtrans Production.",
+        help_text="Centang jika menggunakan Xendit Live API key.",
     )
 
-    server_key = models.CharField(
+    api_key = models.CharField(
         max_length=255,
         blank=True,
     )
 
-    client_key = models.CharField(
+    webhook_token = models.CharField(
         max_length=255,
-        blank=True,
-    )
-
-    merchant_id = models.CharField(
-        max_length=100,
         blank=True,
     )
 
     http_timeout = models.PositiveIntegerField(
         default=15,
-    )
-
-    allowed_payments = models.TextField(
-        default="qris,gopay,shopeepay,bca_va,bni_va,bri_va,echannel,permata_va"
     )
 
     updated_at = models.DateTimeField(auto_now=True)

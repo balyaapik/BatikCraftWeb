@@ -7,7 +7,7 @@ app_name = "payments"
 urlpatterns = [
     path(
         "settlements/<uuid:public_id>/checkout/",
-        views.start_midtrans_checkout,
+        views.start_xendit_checkout,
         name="start_checkout",
     ),
     path(
@@ -17,12 +17,12 @@ urlpatterns = [
     ),
     path(
         "settlements/<uuid:public_id>/sync/",
-        views.sync_midtrans_status,
+        views.sync_xendit_status,
         name="sync_status",
     ),
     path(
-        "midtrans/webhook/",
-        views.midtrans_webhook,
-        name="midtrans_webhook",
+        "xendit/webhook/",
+        views.xendit_webhook,
+        name="xendit_webhook",
     ),
 ]

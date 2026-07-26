@@ -76,6 +76,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "core.ui_language.language_context",
+                "payments.context_processors.payment_gateway_context",
             ],
         },
     }
@@ -135,6 +136,18 @@ BATIKCRAFT_MINT_CONTRACT_ADDRESS = os.getenv(
     "BATIKCRAFT_MINT_CONTRACT_ADDRESS",
     "",
 ).strip()
+
+# ---------------------------------------------------------------------------
+# Xendit payment gateway
+# These are the fallback values used when no PaymentGatewaySetting DB row
+# exists (e.g. first deploy, CI, fresh staging). The DB row always takes
+# priority inside payments/xendit.py.
+# ---------------------------------------------------------------------------
+XENDIT_ENABLED = env_flag("XENDIT_ENABLED", "False")
+XENDIT_API_KEY = os.getenv("XENDIT_API_KEY", "")
+XENDIT_IS_PRODUCTION = env_flag("XENDIT_IS_PRODUCTION", "False")
+XENDIT_WEBHOOK_TOKEN = os.getenv("XENDIT_WEBHOOK_TOKEN", "")
+XENDIT_HTTP_TIMEOUT = int(os.getenv("XENDIT_HTTP_TIMEOUT", "15"))
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "core.User"

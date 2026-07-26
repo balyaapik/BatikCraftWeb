@@ -109,7 +109,7 @@ class BidSerializer(serializers.ModelSerializer):
             current = (
                 locked.bids.aggregate(value=Max("amount"))["value"]
                 or locked.starting_price
-                or Decimal("0")
+                or Decimal(0)
             )
             if validated_data["amount"] <= current:
                 raise serializers.ValidationError(

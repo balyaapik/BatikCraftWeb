@@ -288,7 +288,7 @@ class NFTAssetViewSet(viewsets.ModelViewSet):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if nft.starting_price <= Decimal("0"):
+        if nft.starting_price <= Decimal(0):
             return Response(
                 {"starting_price": "Harga awal harus lebih dari nol."},
                 status=status.HTTP_400_BAD_REQUEST,

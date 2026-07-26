@@ -1,6 +1,5 @@
 from django.db import migrations
 
-
 MYSQL_FORWARD_SQL = (
     """
     ALTER TABLE core_nftasset

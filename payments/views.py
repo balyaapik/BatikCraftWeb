@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from datetime import timedelta
 import json
 import logging
 import uuid
+from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.db.models import Q
 from django.http import Http404, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
@@ -17,18 +18,19 @@ from django.views.decorators.http import require_GET, require_POST
 
 from core.models import AuctionSettlement
 
-from .midtrans import (
-    MidtransError,
-    create_snap_transaction,
+from .xendit import (
+    XenditError,
+    create_invoice,
     environment_name,
-    get_transaction_status,
+    get_invoice,
+    invoice_data,
     is_enabled,
     parse_amount,
     verified_event_key,
-    verify_notification_signature,
+    verify_webhook_token,
 )
 from .models import PaymentGatewayAttempt
-from .services import apply_verified_midtrans_status
+from .services import apply_verified_xendit_status
 
 logger = logging.getLogger(__name__)
 
@@ -59,25 +61,29 @@ def _active_attempt(settlement):
                 PaymentGatewayAttempt.Status.PENDING,
             ]
         )
-        .filter(expires_at__isnull=True)
+        .filter(Q(expires_at__isnull=True) | Q(expires_at__gt=now))
         .first()
-        or settlement.gateway_attempts.filter(
-            status__in=[
-                PaymentGatewayAttempt.Status.CREATED,
-                PaymentGatewayAttempt.Status.PENDING,
-            ],
-            expires_at__gt=now,
-        ).first()
     )
+
+
+def _validate_verified_invoice(attempt, payload):
+    invoice = invoice_data(payload)
+    if str(invoice.get("id", "") or "") != attempt.invoice_id:
+        raise XenditError("Invoice ID hasil verifikasi tidak cocok.")
+    if str(invoice.get("external_id", "") or "") != attempt.order_id:
+        raise XenditError("External ID hasil verifikasi tidak cocok.")
+    if parse_amount(invoice.get("amount")) != attempt.amount:
+        raise XenditError("Nominal hasil verifikasi tidak cocok.")
+    return invoice
 
 
 @login_required
 @require_POST
-def start_midtrans_checkout(request, public_id):
+def start_xendit_checkout(request, public_id):
     if not is_enabled():
         messages.error(
             request,
-            "Midtrans belum dikonfigurasi oleh administrator.",
+            "Xendit belum dikonfigurasi oleh administrator.",
         )
         return redirect("settlement_detail", public_id=public_id)
 
@@ -100,8 +106,8 @@ def start_midtrans_checkout(request, public_id):
 
         existing = _active_attempt(settlement)
         if existing:
-            if existing.redirect_url:
-                return HttpResponseRedirect(existing.redirect_url)
+            if existing.invoice_url:
+                return HttpResponseRedirect(existing.invoice_url)
             messages.info(request, "Checkout sedang dibuat. Silakan coba kembali.")
             return redirect("settlement_detail", public_id=public_id)
 
@@ -109,7 +115,7 @@ def start_midtrans_checkout(request, public_id):
         order_id = f"BCPAY-{settlement.public_id.hex[:20]}-{uuid.uuid4().hex[:8]}"
         attempt = PaymentGatewayAttempt.objects.create(
             settlement=settlement,
-            provider=PaymentGatewayAttempt.Provider.MIDTRANS,
+            provider=PaymentGatewayAttempt.Provider.XENDIT,
             environment=environment_name(),
             order_id=order_id,
             amount=settlement.amount,
@@ -120,23 +126,23 @@ def start_midtrans_checkout(request, public_id):
         reverse("settlement_detail", args=[settlement.public_id])
     )
     try:
-        response = create_snap_transaction(attempt, finish_url)
-    except MidtransError as exc:
+        response = create_invoice(attempt, finish_url)
+    except XenditError as exc:
         PaymentGatewayAttempt.objects.filter(pk=attempt.pk).update(
             status=PaymentGatewayAttempt.Status.FAILED,
             gateway_response={"error": str(exc)},
         )
-        logger.warning("Midtrans checkout failed for %s: %s", order_id, exc)
+        logger.warning("Xendit checkout failed for %s: %s", order_id, exc)
         messages.error(request, f"Checkout gagal dibuat: {exc}")
         return redirect("settlement_detail", public_id=public_id)
 
     PaymentGatewayAttempt.objects.filter(pk=attempt.pk).update(
         status=PaymentGatewayAttempt.Status.PENDING,
-        snap_token=str(response["token"]),
-        redirect_url=str(response["redirect_url"]),
+        invoice_id=str(response["id"]),
+        invoice_url=str(response["invoice_url"]),
         gateway_response=response,
     )
-    return HttpResponseRedirect(str(response["redirect_url"]))
+    return HttpResponseRedirect(str(response["invoice_url"]))
 
 
 @login_required
@@ -168,25 +174,24 @@ def settlement_gateway_status(request, public_id):
 
 @login_required
 @require_POST
-def sync_midtrans_status(request, public_id):
+def sync_xendit_status(request, public_id):
     settlement = _authorized_settlement(request, public_id)
     attempt = settlement.gateway_attempts.first()
     if not attempt:
         messages.error(request, "Belum ada transaksi gateway untuk invoice ini.")
         return redirect("settlement_detail", public_id=public_id)
     try:
-        verified = get_transaction_status(attempt.order_id)
-        if str(verified.get("order_id")) != attempt.order_id:
-            raise MidtransError("Order ID hasil verifikasi tidak cocok.")
-        if parse_amount(verified.get("gross_amount")) != attempt.amount:
-            raise MidtransError("Nominal hasil verifikasi tidak cocok.")
-        apply_verified_midtrans_status(
+        if not attempt.invoice_id:
+            raise XenditError("Invoice Xendit belum tersedia.")
+        verified = get_invoice(attempt.invoice_id)
+        _validate_verified_invoice(attempt, verified)
+        apply_verified_xendit_status(
             attempt.id,
             verified,
             verified_event_key(verified),
             signature_valid=False,
         )
-    except MidtransError as exc:
+    except XenditError as exc:
         messages.error(request, f"Status belum dapat disinkronkan: {exc}")
     else:
         messages.success(request, "Status pembayaran berhasil disinkronkan.")
@@ -195,7 +200,7 @@ def sync_midtrans_status(request, public_id):
 
 @csrf_exempt
 @require_POST
-def midtrans_webhook(request):
+def xendit_webhook(request):
     if not is_enabled():
         return JsonResponse({"detail": "gateway-disabled"}, status=503)
     try:
@@ -203,44 +208,47 @@ def midtrans_webhook(request):
     except (UnicodeDecodeError, json.JSONDecodeError):
         return JsonResponse({"detail": "invalid-json"}, status=400)
 
-    order_id = str(payload.get("order_id", "") or "")
-    if not order_id:
-        return JsonResponse({"detail": "missing-order-id"}, status=400)
-    if not verify_notification_signature(payload):
-        logger.warning("Rejected invalid Midtrans signature for %s", order_id)
-        return JsonResponse({"detail": "invalid-signature"}, status=403)
+    if not verify_webhook_token(request.headers.get("x-callback-token")):
+        logger.warning("Rejected invalid Xendit webhook token")
+        return JsonResponse({"detail": "invalid-webhook-token"}, status=403)
 
-    attempt = PaymentGatewayAttempt.objects.select_related("settlement").filter(
-        order_id=order_id
-    ).first()
+    invoice = invoice_data(payload)
+    invoice_id = str(invoice.get("id", "") or "")
+    order_id = str(invoice.get("external_id", "") or "")
+    if not invoice_id and not order_id:
+        return JsonResponse({"detail": "missing-invoice-reference"}, status=400)
+
+    attempts = PaymentGatewayAttempt.objects.select_related("settlement")
+    attempt = (
+        attempts.filter(invoice_id=invoice_id).first()
+        if invoice_id
+        else attempts.filter(order_id=order_id).first()
+    )
     if attempt is None:
-        return JsonResponse({"detail": "unknown-order-id"}, status=404)
+        return JsonResponse({"detail": "unknown-invoice"}, status=404)
+    if order_id and order_id != attempt.order_id:
+        return JsonResponse({"detail": "order-id-mismatch"}, status=422)
     try:
-        notification_amount = parse_amount(payload.get("gross_amount"))
-    except MidtransError:
+        notification_amount = parse_amount(invoice.get("amount"))
+    except XenditError:
         return JsonResponse({"detail": "invalid-amount"}, status=400)
     if notification_amount != attempt.amount:
         return JsonResponse({"detail": "amount-mismatch"}, status=422)
 
     try:
-        verified = get_transaction_status(order_id)
-    except MidtransError as exc:
-        logger.error("Midtrans status verification failed for %s: %s", order_id, exc)
+        verified = get_invoice(attempt.invoice_id)
+    except XenditError as exc:
+        logger.error("Xendit invoice verification failed for %s: %s", order_id, exc)
         return JsonResponse({"detail": "status-verification-failed"}, status=503)
-
-    if str(verified.get("order_id", "")) != order_id:
-        return JsonResponse({"detail": "verified-order-mismatch"}, status=422)
     try:
-        verified_amount = parse_amount(verified.get("gross_amount"))
-    except MidtransError:
-        return JsonResponse({"detail": "invalid-verified-amount"}, status=422)
-    if verified_amount != attempt.amount:
-        return JsonResponse({"detail": "verified-amount-mismatch"}, status=422)
+        _validate_verified_invoice(attempt, verified)
+    except XenditError:
+        return JsonResponse({"detail": "verified-invoice-mismatch"}, status=422)
 
-    _, event, processed = apply_verified_midtrans_status(
+    _, event, processed = apply_verified_xendit_status(
         attempt.id,
         verified,
-        verified_event_key(verified),
+        verified_event_key(verified, request.headers.get("webhook-id", "")),
         signature_valid=True,
     )
     return JsonResponse(

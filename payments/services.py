@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from core.models import AuctionSettlement, NFTAsset
 
-from .midtrans import classify_status, settlement_payment_method
+from .xendit import classify_status, invoice_data, settlement_payment_method
 from .models import PaymentGatewayAttempt, PaymentGatewayEvent
 
 
@@ -68,7 +68,7 @@ def mint_verified_settlement(settlement_id: int, attempt_id: int):
         settlement.mint_reference
         or f"BCMINT-{uuid.uuid4().hex[:20].upper()}"
     )
-    settlement.review_note = "Pembayaran diverifikasi otomatis oleh Midtrans."
+    settlement.review_note = "Pembayaran diverifikasi otomatis oleh Xendit."
     settlement.save(
         update_fields=[
             "status",
@@ -87,7 +87,7 @@ def mint_verified_settlement(settlement_id: int, attempt_id: int):
 
 
 @transaction.atomic
-def apply_verified_midtrans_status(
+def apply_verified_xendit_status(
     attempt_id: int,
     payload: dict,
     event_key: str,
@@ -99,11 +99,12 @@ def apply_verified_midtrans_status(
         .select_related("settlement")
         .get(pk=attempt_id)
     )
+    invoice = invoice_data(payload)
     event, created = PaymentGatewayEvent.objects.get_or_create(
         event_key=event_key,
         defaults={
             "attempt": attempt,
-            "transaction_status": str(payload.get("transaction_status", "")),
+            "transaction_status": str(invoice.get("status", "")),
             "payload": payload,
             "signature_valid": signature_valid,
             "verified_with_api": True,
@@ -122,17 +123,19 @@ def apply_verified_midtrans_status(
         "refunded": PaymentGatewayAttempt.Status.REFUNDED,
     }
     attempt.status = status_map[classification]
-    attempt.gateway_status = str(payload.get("transaction_status", ""))[:32]
-    attempt.transaction_id = str(payload.get("transaction_id", ""))[:120]
-    attempt.payment_type = str(payload.get("payment_type", ""))[:64]
-    attempt.fraud_status = str(payload.get("fraud_status", ""))[:32]
+    attempt.gateway_status = str(invoice.get("status", ""))[:32]
+    attempt.transaction_id = str(
+        invoice.get("payment_id") or invoice.get("id") or ""
+    )[:120]
+    attempt.payment_type = str(
+        invoice.get("payment_method") or invoice.get("payment_channel") or "QRIS"
+    )[:64]
     attempt.gateway_response = payload
     update_fields = [
         "status",
         "gateway_status",
         "transaction_id",
         "payment_type",
-        "fraud_status",
         "gateway_response",
         "updated_at",
     ]
@@ -157,7 +160,7 @@ def apply_verified_midtrans_status(
     else:
         outcome = classification
 
-    event.transaction_status = str(payload.get("transaction_status", ""))[:32]
+    event.transaction_status = str(invoice.get("status", ""))[:32]
     event.payload = payload
     event.signature_valid = signature_valid
     event.verified_with_api = True
