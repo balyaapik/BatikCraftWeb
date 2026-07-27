@@ -89,7 +89,10 @@ class AuctionPaymentFlowTests(TestCase):
         settlement = self._create_invoice()
         self.assertEqual(settlement.winning_bid, self.winning_bid)
         self.assertEqual(settlement.buyer, self.buyer)
-        self.assertEqual(settlement.amount, Decimal("150000.00"))
+        self.assertEqual(settlement.subtotal_amount, Decimal("150000.00"))
+        self.assertEqual(settlement.vat_percent, Decimal("11.00"))
+        self.assertEqual(settlement.vat_amount, Decimal("16500.00"))
+        self.assertEqual(settlement.amount, Decimal("166500.00"))
         self.nft.refresh_from_db()
         self.assertEqual(self.nft.status, NFTAsset.Status.AWAITING_PAYMENT)
 

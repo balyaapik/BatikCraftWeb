@@ -13,6 +13,11 @@ Website Django untuk ekosistem BatikCraft: landing page, blog, creator dashboard
 - REST API dengan token authentication untuk upload NFT dari aplikasi Studio.
 - Upload melalui file multipart atau URL gambar.
 - Bidding transaksional dengan validasi harga berjalan dan waktu auction.
+- Fee bidding creator dibayar di muka melalui payment gateway: dihitung dari
+  persentase harga terendah, ditambah PPN 11%, dan tidak dikembalikan bila karya
+  tidak terjual.
+- Invoice buyer otomatis memuat subtotal, PPN 11%, dan total tagihan.
+- Payout creator tercatat otomatis setelah invoice buyer lunas.
 - Penyimpanan media dinamis: folder lokal VPS atau Cloudflare R2 tanpa restart aplikasi.
 - Kredensial R2 disimpan terenkripsi dan Secret Access Key tidak ditampilkan kembali.
 - Dukungan database SQLite untuk development, PostgreSQL, serta MySQL 8 dengan pengujian CI terpisah.

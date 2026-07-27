@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "storages",
     "storage_config.apps.StorageConfigConfig",
     "core",
+    "payments",
 ]
 
 MIDDLEWARE = [
@@ -75,6 +76,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "core.ui_language.language_context",
+                "payments.context_processors.payment_gateway_context",
             ],
         },
     }
@@ -82,9 +84,13 @@ TEMPLATES = [
 WSGI_APPLICATION = "batikcraft_web.wsgi.application"
 ASGI_APPLICATION = "batikcraft_web.asgi.application"
 
+_DEFAULT_DATABASE_URL = f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
+# `.env.example` mengirim DATABASE_URL kosong untuk mode SQLite. Versi baru
+# dj-database-url menganggap variabel kosong sebagai "sudah diset" dan
+# mengembalikan konfigurasi kosong, sehingga quickstart di README gagal start.
 DATABASES = {
-    "default": dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+    "default": dj_database_url.parse(
+        os.environ.get("DATABASE_URL", "").strip() or _DEFAULT_DATABASE_URL,
         conn_max_age=60,
         conn_health_checks=True,
     )
@@ -134,6 +140,18 @@ BATIKCRAFT_MINT_CONTRACT_ADDRESS = os.getenv(
     "BATIKCRAFT_MINT_CONTRACT_ADDRESS",
     "",
 ).strip()
+
+# ---------------------------------------------------------------------------
+# Xendit payment gateway
+# These are the fallback values used when no PaymentGatewaySetting DB row
+# exists (e.g. first deploy, CI, fresh staging). The DB row always takes
+# priority inside payments/xendit.py.
+# ---------------------------------------------------------------------------
+XENDIT_ENABLED = env_flag("XENDIT_ENABLED", "False")
+XENDIT_API_KEY = os.getenv("XENDIT_API_KEY", "")
+XENDIT_IS_PRODUCTION = env_flag("XENDIT_IS_PRODUCTION", "False")
+XENDIT_WEBHOOK_TOKEN = os.getenv("XENDIT_WEBHOOK_TOKEN", "")
+XENDIT_HTTP_TIMEOUT = int(os.getenv("XENDIT_HTTP_TIMEOUT", "15"))
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "core.User"

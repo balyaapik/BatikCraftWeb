@@ -11,7 +11,9 @@
   <div class="settlement-grid">
     <article class="settlement-card"><h2>Ringkasan transaksi</h2><dl>
       <div><dt>NFT</dt><dd><a href="{% url 'nft_detail' settlement.nft.pk %}">{{ settlement.nft.title }}</a></dd></div>
-      <div><dt>Bid pemenang</dt><dd>Rp{{ settlement.amount|floatformat:0 }}</dd></div>
+      <div><dt>Bid pemenang</dt><dd>Rp{{ settlement.subtotal_amount|floatformat:0 }}</dd></div>
+      <div><dt>PPN {{ settlement.vat_percent|floatformat:0 }}%</dt><dd>Rp{{ settlement.vat_amount|floatformat:0 }}</dd></div>
+      <div><dt><strong>Total tagihan</strong></dt><dd><strong>Rp{{ settlement.amount|floatformat:0 }}</strong></dd></div>
       <div><dt>Metode</dt><dd>{{ settlement.get_payment_method_display }}</dd></div>
       <div><dt>Batas pembayaran</dt><dd>{{ settlement.payment_due_at|date:'d M Y, H:i' }}</dd></div>
     </dl></article>
@@ -31,10 +33,16 @@
   </div></article>
   {% endif %}
   {% if settlement.status == 'accepted' and user.id == settlement.buyer_id %}
-  <div class="settlement-grid">
-    <article class="settlement-card"><h2>Instruksi pembayaran</h2><div class="payment-instructions">{{ settlement.payment_instructions|linebreaksbr }}</div><p class="settlement-muted">Bukti pembayaran hanya dapat dibuka oleh buyer, creator, dan administrator.</p></article>
-    <article class="settlement-card"><h2>Kirim bukti pembayaran</h2><form class="settlement-form" method="post" enctype="multipart/form-data" action="{% url 'submit_auction_payment' settlement.public_id %}">{% csrf_token %}{{ payment_form.as_p }}<button class="btn btn-primary" type="submit">Kirim untuk diverifikasi</button></form></article>
-  </div>
+  <article class="settlement-card">
+    <h2>Pembayaran</h2>
+    <p>Klik tombol di bawah untuk melanjutkan pembayaran melalui Xendit. Anda akan diarahkan ke halaman pembayaran yang aman.</p>
+    <div class="settlement-actions">
+      <form method="post" action="{% url 'payments:start_checkout' settlement.public_id %}">
+        {% csrf_token %}
+        <button class="btn btn-primary" type="submit">Bayar dengan QRIS</button>
+      </form>
+    </div>
+  </article>
   {% endif %}
   {% if settlement.payment_submitted_at %}<article class="settlement-card"><h2>Data pembayaran</h2><dl>
     <div><dt>Referensi</dt><dd>{{ settlement.payment_reference|default:'—' }}</dd></div>

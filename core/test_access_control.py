@@ -104,7 +104,18 @@ class WriteEndpointsRejectGetTests(TestCase):
 
         self.assertEqual(response.status_code, 405)
 
+    def test_publish_without_paid_fee_keeps_nft_in_draft(self):
+        self.client.force_login(self.creator)
+        response = self.client.post(reverse("nft_publish", args=[self.nft.pk]))
+        self.nft.refresh_from_db()
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.nft.status, NFTAsset.Status.DRAFT)
+
     def test_publishing_is_still_possible_with_post(self):
+        from core.tests import settle_listing_fee
+
+        settle_listing_fee(self.nft)
         self.client.force_login(self.creator)
         response = self.client.post(reverse("nft_publish", args=[self.nft.pk]))
         self.nft.refresh_from_db()

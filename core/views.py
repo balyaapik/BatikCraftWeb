@@ -4,10 +4,10 @@ Pages that anonymous visitors can open live in ``public_views`` and the
 authentication flow lives in ``auth_views``.
 """
 
+import uuid
 from datetime import timedelta
 from decimal import Decimal
 from pathlib import Path
-import uuid
 
 from django.conf import settings
 from django.contrib import messages
@@ -18,6 +18,13 @@ from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+
+from payments.services import (
+    create_creator_payout,
+    current_vat_percent,
+    issue_listing_fee_invoice,
+    listing_fee_is_paid,
+)
 
 from .decorators import role_required
 from .forms import (
@@ -35,6 +42,7 @@ from .models import (
     ModelPurchase,
     NFTAsset,
     User,
+    quantize_money,
 )
 
 
@@ -49,10 +57,13 @@ def dashboard_router(request):
 
 @role_required(User.Role.CREATOR)
 def creator_dashboard(request):
-    nfts = request.user.nfts.annotate(
-        bid_count=Count("bids"),
-        max_bid=Max("bids__amount"),
-    ).select_related("current_owner")
+    nfts = (
+        request.user.nfts.annotate(
+            bid_count=Count("bids"),
+            max_bid=Max("bids__amount"),
+        )
+        .select_related("current_owner", "listing_fee_invoice")
+    )
     models = request.user.model_listings.annotate(
         purchase_count=Count(
             "purchases",
@@ -180,7 +191,7 @@ def nft_create(request):
 @require_POST
 def nft_publish(request, pk):
     nft = get_object_or_404(NFTAsset, pk=pk, owner=request.user)
-    if nft.starting_price <= Decimal("0"):
+    if nft.starting_price <= Decimal(0):
         messages.error(
             request,
             "Harga awal harus lebih dari nol sebelum NFT dipublikasikan.",
@@ -194,6 +205,19 @@ def nft_publish(request, pk):
         messages.error(
             request,
             "NFT yang sedang ditagihkan atau sudah terjual tidak dapat dipublikasikan ulang.",
+        )
+    elif not listing_fee_is_paid(nft):
+        # Tagihan diterbitkan agar creator melihat nominalnya, tetapi checkout
+        # tetap harus dimulai lewat POST dari tombol "Bayar fee" di dashboard.
+        fee_invoice = issue_listing_fee_invoice(nft)
+        messages.error(
+            request,
+            (
+                f"Fee bidding Rp{fee_invoice.total_amount:,.0f} "
+                f"(fee Rp{fee_invoice.fee_amount:,.0f} + PPN "
+                f"{fee_invoice.vat_percent:.0f}%) harus dilunasi sebelum NFT "
+                "tayang. Gunakan tombol Bayar fee pada karya ini."
+            ),
         )
     else:
         nft.status = NFTAsset.Status.LISTED
@@ -324,12 +348,19 @@ def create_auction_invoice(request, pk):
             )
             return redirect("nft_detail", pk=pk)
 
+        vat_percent = current_vat_percent()
+        vat_amount = quantize_money(
+            winning_bid.amount * (vat_percent / Decimal(100))
+        )
         settlement = AuctionSettlement.objects.create(
             nft=nft,
             winning_bid=winning_bid,
             creator=request.user,
             buyer=winning_bid.bidder,
-            amount=winning_bid.amount,
+            subtotal_amount=winning_bid.amount,
+            vat_percent=vat_percent,
+            vat_amount=vat_amount,
+            amount=winning_bid.amount + vat_amount,
             payment_method=form.cleaned_data["payment_method"],
             payment_instructions=form.cleaned_data["payment_instructions"],
             payment_due_at=timezone.now()
@@ -529,6 +560,9 @@ def _mint_paid_settlement(settlement):
             "updated_at",
         ]
     )
+    # Catat hak payout creator juga untuk verifikasi manual, bukan hanya jalur
+    # gateway otomatis, supaya tidak ada penjualan lunas tanpa payout tercatat.
+    create_creator_payout(settlement.pk)
     return settlement
 
 

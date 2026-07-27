@@ -11,6 +11,7 @@ from django.db import transaction
 from django.db.models import F, Q
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
+from django.urls import reverse
 from django.utils import timezone
 from rest_framework import generics, permissions, serializers, status, viewsets
 from rest_framework.authentication import TokenAuthentication
@@ -19,6 +20,13 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from payments.models import ListingFeeInvoice
+from payments.services import (
+    issue_listing_fee_invoice,
+    listing_fee_is_paid,
+    listing_fee_quote,
+)
 
 from .models import (
     AuctionSettlement,
@@ -38,6 +46,37 @@ from .serializers import (
 _PACKAGE_METADATA_KEY = "_studio_source_package"
 _ALLOWED_NFT_PACKAGE_SUFFIXES = {".batikcraftnft", ".batikpack"}
 _DEFAULT_MAX_PACKAGE_SIZE = 512 * 1024 * 1024
+
+
+def _fee_config():
+    from payments.models import PlatformFeeSetting
+
+    return PlatformFeeSetting.load()
+
+
+def _fee_checkout_url(request, nft) -> str:
+    return request.build_absolute_uri(
+        reverse("payments:start_listing_fee_checkout", args=[nft.pk])
+    )
+
+
+def _listing_fee_payload(request, fee_invoice) -> dict:
+    """Bentuk respons fee yang dikonsumsi BatikCraft Studio."""
+    return {
+        "status": fee_invoice.status,
+        "invoice_number": fee_invoice.invoice_number,
+        "currency": "IDR",
+        "base_amount": str(fee_invoice.base_amount),
+        "fee_percent": str(fee_invoice.fee_percent),
+        "fee_amount": str(fee_invoice.fee_amount),
+        "vat_percent": str(fee_invoice.vat_percent),
+        "vat_amount": str(fee_invoice.vat_amount),
+        "total_amount": str(fee_invoice.total_amount),
+        "due_at": fee_invoice.due_at.isoformat() if fee_invoice.due_at else None,
+        "paid_at": fee_invoice.paid_at.isoformat() if fee_invoice.paid_at else None,
+        "checkout_url": _fee_checkout_url(request, fee_invoice.nft),
+        "refundable": False,
+    }
 
 
 def _is_creator(user) -> bool:
@@ -172,7 +211,7 @@ class StudioCapabilitiesView(APIView):
     def get(self, request):
         return Response(
             {
-                "api_version": "1.2",
+                "api_version": "1.3",
                 "minimum_studio_version": "0.2.0",
                 "authentication": "token",
                 "pagination": "page-number",
@@ -196,10 +235,22 @@ class StudioCapabilitiesView(APIView):
                     "nft_owned_library": True,
                     "nft_source_package_upload": True,
                     "nft_source_package_download": True,
+                    "nft_listing_fee": True,
+                    "nft_listing_fee_vat": True,
+                    "creator_payout": True,
                     "model_marketplace": True,
                     "model_purchase": True,
                     "model_download": True,
                     "model_library": True,
+                },
+                "billing": {
+                    "currency": "IDR",
+                    "listing_fee_basis": "starting_price",
+                    "listing_fee_refundable": False,
+                    "listing_fee_percent": str(_fee_config().listing_fee_percent),
+                    "minimum_listing_fee": str(_fee_config().minimum_listing_fee),
+                    "vat_percent": str(_fee_config().vat_percent),
+                    "vat_applies_to": ["listing_fee", "buyer_invoice"],
                 },
             }
         )
@@ -288,7 +339,7 @@ class NFTAssetViewSet(viewsets.ModelViewSet):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if nft.starting_price <= Decimal("0"):
+        if nft.starting_price <= Decimal(0):
             return Response(
                 {"starting_price": "Harga awal harus lebih dari nol."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -308,11 +359,59 @@ class NFTAssetViewSet(viewsets.ModelViewSet):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        if not listing_fee_is_paid(nft):
+            fee_invoice = issue_listing_fee_invoice(nft)
+            return Response(
+                {
+                    "detail": (
+                        "Fee bidding harus dilunasi sebelum NFT tayang di market."
+                    ),
+                    "listing_fee": _listing_fee_payload(request, fee_invoice),
+                },
+                status=status.HTTP_402_PAYMENT_REQUIRED,
+            )
         nft.status = NFTAsset.Status.LISTED
         if not nft.auction_starts_at:
             nft.auction_starts_at = timezone.now()
         nft.save(update_fields=["status", "auction_starts_at", "updated_at"])
         return Response(self.get_serializer(nft).data)
+
+    @action(detail=True, methods=["get", "post"], url_path="listing-fee")
+    def listing_fee(self, request, pk=None):
+        """Lihat atau terbitkan tagihan fee bidding untuk satu NFT.
+
+        GET mengembalikan estimasi bila tagihan belum ada, sehingga Studio bisa
+        menampilkan biaya sebelum creator memutuskan untuk publish.
+        """
+        nft = self.get_object()
+        if nft.owner_id != request.user.id and not request.user.is_superuser:
+            return Response(
+                {"detail": "Hanya pemilik yang dapat melihat fee NFT ini."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        existing = ListingFeeInvoice.objects.filter(nft=nft).first()
+        if request.method == "GET" and existing is None:
+            quote = listing_fee_quote(nft)
+            return Response(
+                {
+                    "status": "not_issued",
+                    "currency": "IDR",
+                    "base_amount": str(quote["base_amount"]),
+                    "fee_percent": str(quote["fee_percent"]),
+                    "fee_amount": str(quote["fee_amount"]),
+                    "vat_percent": str(quote["vat_percent"]),
+                    "vat_amount": str(quote["vat_amount"]),
+                    "total_amount": str(quote["total_amount"]),
+                    "checkout_url": _fee_checkout_url(request, nft),
+                }
+            )
+        if nft.starting_price <= Decimal(0):
+            return Response(
+                {"starting_price": "Harga awal harus lebih dari nol."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        fee_invoice = existing if request.method == "GET" else issue_listing_fee_invoice(nft)
+        return Response(_listing_fee_payload(request, fee_invoice))
 
     @action(detail=True, methods=["get", "post"])
     def bids(self, request, pk=None):
