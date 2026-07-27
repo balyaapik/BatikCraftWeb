@@ -31,10 +31,16 @@
   </div></article>
   {% endif %}
   {% if settlement.status == 'accepted' and user.id == settlement.buyer_id %}
-  <div class="settlement-grid">
-    <article class="settlement-card"><h2>Instruksi pembayaran</h2><div class="payment-instructions">{{ settlement.payment_instructions|linebreaksbr }}</div><p class="settlement-muted">Bukti pembayaran hanya dapat dibuka oleh buyer, creator, dan administrator.</p></article>
-    <article class="settlement-card"><h2>Kirim bukti pembayaran</h2><form class="settlement-form" method="post" enctype="multipart/form-data" action="{% url 'submit_auction_payment' settlement.public_id %}">{% csrf_token %}{{ payment_form.as_p }}<button class="btn btn-primary" type="submit">Kirim untuk diverifikasi</button></form></article>
-  </div>
+  <article class="settlement-card">
+    <h2>Pembayaran</h2>
+    <p>Klik tombol di bawah untuk melanjutkan pembayaran melalui Xendit. Anda akan diarahkan ke halaman pembayaran yang aman.</p>
+    <div class="settlement-actions">
+      <form method="post" action="{% url 'payments:start_checkout' settlement.public_id %}">
+        {% csrf_token %}
+        <button class="btn btn-primary" type="submit">Bayar dengan QRIS</button>
+      </form>
+    </div>
+  </article>
   {% endif %}
   {% if settlement.payment_submitted_at %}<article class="settlement-card"><h2>Data pembayaran</h2><dl>
     <div><dt>Referensi</dt><dd>{{ settlement.payment_reference|default:'—' }}</dd></div>
