@@ -26,7 +26,7 @@ def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def _jpeg_bytes() -> bytes:
+def jpeg_preview() -> bytes:
     stream = io.BytesIO()
     Image.new("RGB", (4, 4), (200, 120, 40)).save(stream, format="JPEG")
     return stream.getvalue()
@@ -87,7 +87,7 @@ def build_studio_package(
 
 class StudioPackageVerificationTests(TestCase):
     def test_valid_package_exposes_preview_fingerprint(self):
-        preview = _jpeg_bytes()
+        preview = jpeg_preview()
 
         verified = verify_studio_package(io.BytesIO(build_studio_package(preview)))
 
@@ -96,7 +96,7 @@ class StudioPackageVerificationTests(TestCase):
         self.assertEqual(verified.title, "Sekar Jagad")
 
     def test_manifest_edited_after_sealing_is_rejected(self):
-        package = build_studio_package(_jpeg_bytes(), tamper_manifest=True)
+        package = build_studio_package(jpeg_preview(), tamper_manifest=True)
 
         with self.assertRaises(StudioPackageError) as ctx:
             verify_studio_package(io.BytesIO(package))
@@ -104,13 +104,13 @@ class StudioPackageVerificationTests(TestCase):
         self.assertIn("diubah setelah disegel", str(ctx.exception))
 
     def test_package_without_preview_is_rejected(self):
-        package = build_studio_package(_jpeg_bytes(), drop_preview=True)
+        package = build_studio_package(jpeg_preview(), drop_preview=True)
 
         with self.assertRaises(StudioPackageError):
             verify_studio_package(io.BytesIO(package))
 
     def test_checksum_mismatch_is_rejected(self):
-        package = build_studio_package(_jpeg_bytes(), wrong_checksum=True)
+        package = build_studio_package(jpeg_preview(), wrong_checksum=True)
 
         with self.assertRaises(StudioPackageError):
             verify_studio_package(io.BytesIO(package))
@@ -122,7 +122,7 @@ class StudioPackageVerificationTests(TestCase):
     def test_plain_zip_without_manifest_is_rejected(self):
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, "w") as archive:
-            archive.writestr("gambar.jpg", _jpeg_bytes())
+            archive.writestr("gambar.jpg", jpeg_preview())
 
         with self.assertRaises(StudioPackageError):
             verify_studio_package(io.BytesIO(buffer.getvalue()))
@@ -137,7 +137,7 @@ class StudioOriginAPITests(APITestCase):
         )
         token = Token.objects.create(user=self.creator)
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
-        self.preview = _jpeg_bytes()
+        self.preview = jpeg_preview()
 
     def _payload(self, package: bytes | None, image: bytes | None, **extra):
         data = {

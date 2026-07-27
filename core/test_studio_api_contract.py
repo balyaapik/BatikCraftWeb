@@ -16,6 +16,8 @@ from rest_framework.test import APITestCase
 
 from payments.models import ListingFeeInvoice
 
+from .test_timezone_and_studio_origin import build_studio_package, jpeg_preview
+
 from .models import AuctionSettlement, NFTAsset, User
 
 
@@ -66,8 +68,9 @@ class StudioAPIContractTests(APITestCase):
     def auth(self, token):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
-    def upload_library(self, *, suffix=".batikpack", include_package=True):
+    def upload_library(self, *, suffix=".batikcraftnft", include_package=True):
         self.auth(self.creator_token)
+        preview = jpeg_preview()
         payload = {
             "title": "Pustaka Ornamen Sekar",
             "description": "Pustaka aset dari BatikCraft Studio",
@@ -85,12 +88,14 @@ class StudioAPIContractTests(APITestCase):
                     "asset_count": 3,
                 }
             ),
-            "image": valid_png_upload(),
+            "image": SimpleUploadedFile(
+                "preview.jpg", preview, content_type="image/jpeg"
+            ),
         }
         if include_package:
             payload["package_file"] = SimpleUploadedFile(
                 f"sekar{suffix}",
-                b"PK\x03\x04batik-pack-content",
+                build_studio_package(preview),
                 content_type="application/zip",
             )
         return self.client.post(
@@ -125,7 +130,7 @@ class StudioAPIContractTests(APITestCase):
         self.assertEqual(created.status_code, 201, created.data)
         nft = NFTAsset.objects.get(pk=created.data["id"])
         package_record = nft.metadata["_studio_source_package"]
-        self.assertEqual(package_record["filename"], "sekar.batikpack")
+        self.assertEqual(package_record["filename"], "sekar.batikcraftnft")
         self.assertEqual(len(package_record["sha256"]), 64)
 
         # Publish ditolak selama fee bidding belum lunas.
@@ -151,7 +156,7 @@ class StudioAPIContractTests(APITestCase):
             reverse("api-nft-package", args=[nft.pk])
         )
         self.assertEqual(owner_download.status_code, 200)
-        self.assertIn("sekar.batikpack", owner_download["Content-Disposition"])
+        self.assertIn("sekar.batikcraftnft", owner_download["Content-Disposition"])
         self.assertEqual(
             owner_download["X-BatikCraft-Package-SHA256"],
             package_record["sha256"],
@@ -218,16 +223,19 @@ class StudioAPIContractTests(APITestCase):
         )
         self.assertEqual(after_paid_mint.status_code, 200)
 
-    def test_asset_library_publish_requires_batikpack(self):
-        created = self.upload_library(include_package=False)
-        self.assertEqual(created.status_code, 201, created.data)
-        published = self.client.post(
-            reverse("api-nft-publish", args=[created.data["id"]]),
-            {},
-            format="json",
-        )
-        self.assertEqual(published.status_code, 400)
-        self.assertIn("package_file", published.data)
+    def test_upload_without_sealed_package_is_rejected(self):
+        """Gambar tanpa paket bersegel ditolak sejak pembuatan."""
+        rejected = self.upload_library(include_package=False)
+
+        self.assertEqual(rejected.status_code, 400, rejected.data)
+        self.assertIn("package_file", rejected.data)
+
+    def test_batikpack_cannot_vouch_for_an_image(self):
+        """.batikpack tidak memuat preview bersegel, jadi tidak bisa jadi bukti."""
+        rejected = self.upload_library(suffix=".batikpack")
+
+        self.assertEqual(rejected.status_code, 400, rejected.data)
+        self.assertIn("package_file", rejected.data)
 
     def test_invalid_package_extension_is_rejected_without_orphan_nft(self):
         before = NFTAsset.objects.count()
@@ -239,16 +247,19 @@ class StudioAPIContractTests(APITestCase):
 
     def test_regular_nft_package_accepts_batikcraftnft(self):
         self.auth(self.creator_token)
+        preview = jpeg_preview()
         created = self.client.post(
             reverse("api-nft-list"),
             {
                 "title": "Motif Digital",
-                "image_url": "https://example.com/motif.png",
                 "starting_price": str(Decimal("125000.00")),
                 "metadata": json.dumps({"source_type": "motif_nft"}),
+                "image": SimpleUploadedFile(
+                    "preview.jpg", preview, content_type="image/jpeg"
+                ),
                 "package_file": SimpleUploadedFile(
                     "motif.batikcraftnft",
-                    b"PK\x03\x04batikcraft-nft-content",
+                    build_studio_package(preview),
                     content_type="application/zip",
                 ),
             },
