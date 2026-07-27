@@ -28,6 +28,12 @@ from payments.services import (
     listing_fee_quote,
 )
 
+from .studio_package import (
+    StudioPackageError,
+    sha256_of_upload,
+    verify_studio_package,
+)
+
 from .models import (
     AuctionSettlement,
     ModelAsset,
@@ -44,6 +50,7 @@ from .serializers import (
 )
 
 _PACKAGE_METADATA_KEY = "_studio_source_package"
+_STUDIO_ORIGIN_METADATA_KEY = "_studio_origin"
 _ALLOWED_NFT_PACKAGE_SUFFIXES = {".batikcraftnft", ".batikpack"}
 _DEFAULT_MAX_PACKAGE_SIZE = 512 * 1024 * 1024
 
@@ -77,6 +84,104 @@ def _listing_fee_payload(request, fee_invoice) -> dict:
         "checkout_url": _fee_checkout_url(request, fee_invoice.nft),
         "refundable": False,
     }
+
+
+def _studio_origin_required() -> bool:
+    """Marketplace hanya menerima karya dari paket BatikCraft Studio."""
+    return bool(getattr(settings, "BATIKCRAFT_REQUIRE_STUDIO_PACKAGE", True))
+
+
+def _verify_studio_origin(upload, image, serializer, instance=None):
+    """Pastikan gambar NFT benar-benar preview dari paket Studio yang utuh.
+
+    Mengembalikan hasil verifikasi bila paket disertakan, atau None bila
+    permintaan ini tidak menyentuh gambar maupun paket.
+    """
+    if not _studio_origin_required():
+        return None
+
+    if str(serializer.validated_data.get("image_url", "") or "").strip():
+        raise serializers.ValidationError(
+            {
+                "image_url": (
+                    "Gambar NFT tidak boleh diambil dari URL luar. Unggah paket "
+                    ".batikcraftnft dari BatikCraft Studio."
+                )
+            }
+        )
+
+    if upload is None:
+        if image is not None:
+            raise serializers.ValidationError(
+                {
+                    "package_file": (
+                        "Gambar hanya diterima bersama paket .batikcraftnft dari "
+                        "BatikCraft Studio."
+                    )
+                }
+            )
+        if instance is not None:
+            return None
+        raise serializers.ValidationError(
+            {
+                "package_file": (
+                    "Karya baru wajib menyertakan paket .batikcraftnft yang "
+                    "diekspor BatikCraft Studio."
+                )
+            }
+        )
+
+    if Path(upload.name).suffix.casefold() != ".batikcraftnft":
+        # .batikpack (pustaka aset) tidak memuat preview bersegel sehingga tidak
+        # dapat dipakai sebagai bukti asal gambar.
+        raise serializers.ValidationError(
+            {
+                "package_file": (
+                    "Gambar NFT harus disertai paket .batikcraftnft, bukan "
+                    ".batikpack."
+                )
+            }
+        )
+    if image is None:
+        raise serializers.ValidationError(
+            {"image": "Sertakan preview dari paket sebagai gambar NFT."}
+        )
+
+    try:
+        upload.seek(0)
+        verified = verify_studio_package(upload)
+    except StudioPackageError as exc:
+        raise serializers.ValidationError({"package_file": str(exc)}) from exc
+    finally:
+        upload.seek(0)
+
+    if sha256_of_upload(image) != verified.preview_sha256:
+        raise serializers.ValidationError(
+            {
+                "image": (
+                    "Gambar yang diunggah bukan preview dari paket tersebut. "
+                    "Publikasikan langsung dari BatikCraft Studio."
+                )
+            }
+        )
+    return verified
+
+
+def _record_studio_origin(nft: NFTAsset, verified) -> None:
+    """Simpan jejak paket asal supaya dapat diaudit administrator."""
+    metadata = dict(nft.metadata or {})
+    metadata[_STUDIO_ORIGIN_METADATA_KEY] = {
+        "package_id": verified.package_id,
+        "project_id": verified.project_id,
+        "creator_user_id": verified.creator_user_id,
+        "preview_sha256": verified.preview_sha256,
+        "preview_size": verified.preview_size,
+        "verified_at": timezone.now().isoformat(),
+        # Segel paket hanya checksum; ini bukan bukti tanda tangan kriptografis.
+        "signature_verified": False,
+    }
+    nft.metadata = metadata
+    nft.save(update_fields=["metadata", "updated_at"])
 
 
 def _is_creator(user) -> bool:
@@ -299,8 +404,12 @@ class NFTAssetViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         if not _is_creator(self.request.user):
             raise PermissionDenied("Hanya creator yang dapat mengunggah NFT.")
-        nft = serializer.save(owner=self.request.user)
         upload = self.request.FILES.get("package_file")
+        image = self.request.FILES.get("image")
+        verified = _verify_studio_origin(upload, image, serializer)
+        nft = serializer.save(owner=self.request.user)
+        if verified is not None:
+            _record_studio_origin(nft, verified)
         if upload is not None:
             try:
                 _store_uploaded_package(nft, upload)
@@ -309,8 +418,14 @@ class NFTAssetViewSet(viewsets.ModelViewSet):
                 raise
 
     def perform_update(self, serializer):
-        nft = serializer.save()
         upload = self.request.FILES.get("package_file")
+        image = self.request.FILES.get("image")
+        verified = _verify_studio_origin(
+            upload, image, serializer, instance=serializer.instance
+        )
+        nft = serializer.save()
+        if verified is not None:
+            _record_studio_origin(nft, verified)
         if upload is not None:
             _store_uploaded_package(nft, upload)
 

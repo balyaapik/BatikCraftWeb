@@ -61,6 +61,7 @@ class UserSerializer(serializers.ModelSerializer):
             "public_name",
             "bio",
             "wallet_address",
+            "timezone_name",
             "payout_bank_code",
             "payout_account_number",
             "payout_account_holder",

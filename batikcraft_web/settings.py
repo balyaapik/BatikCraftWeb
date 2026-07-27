@@ -61,6 +61,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "core.timezone_middleware.ActiveTimezoneMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
@@ -206,3 +207,8 @@ LOGGING = {
         "level": os.getenv("DJANGO_LOG_LEVEL", "INFO"),
     },
 }
+
+# Gambar NFT hanya diterima bila berasal dari paket .batikcraftnft BatikCraft
+# Studio dan sidik jarinya cocok dengan preview di dalam paket. Setel False
+# hanya untuk migrasi data lama atau pengujian.
+BATIKCRAFT_REQUIRE_STUDIO_PACKAGE = env_flag("BATIKCRAFT_REQUIRE_STUDIO_PACKAGE", "True")
