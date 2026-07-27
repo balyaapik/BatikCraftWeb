@@ -14,7 +14,20 @@ from PIL import Image
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
+from payments.models import ListingFeeInvoice
+
 from .models import AuctionSettlement, NFTAsset, User
+
+
+def settle_listing_fee(nft) -> ListingFeeInvoice:
+    """Lunasi fee bidding agar NFT dapat dipublikasikan dalam pengujian."""
+    from payments.services import issue_listing_fee_invoice
+
+    invoice = issue_listing_fee_invoice(nft)
+    invoice.status = ListingFeeInvoice.Status.PAID
+    invoice.paid_at = timezone.now()
+    invoice.save(update_fields=["status", "paid_at", "updated_at"])
+    return invoice
 
 
 def valid_png_upload() -> SimpleUploadedFile:
@@ -91,7 +104,7 @@ class StudioAPIContractTests(APITestCase):
         response = self.client.get(reverse("api_capabilities"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["api_version"], "1.2")
+        self.assertEqual(response.data["api_version"], "1.3")
         self.assertEqual(response.data["minimum_studio_version"], "0.2.0")
         self.assertTrue(response.data["features"]["nft_auction_settlement"])
         self.assertTrue(response.data["features"]["nft_payment_verification"])
@@ -100,6 +113,12 @@ class StudioAPIContractTests(APITestCase):
         self.assertTrue(response.data["features"]["nft_source_package_upload"])
         self.assertTrue(response.data["features"]["nft_source_package_download"])
         self.assertTrue(response.data["features"]["model_download"])
+        self.assertTrue(response.data["features"]["nft_listing_fee"])
+        self.assertTrue(response.data["features"]["creator_payout"])
+        billing = response.data["billing"]
+        self.assertEqual(billing["listing_fee_basis"], "starting_price")
+        self.assertFalse(billing["listing_fee_refundable"])
+        self.assertEqual(billing["vat_percent"], "11.00")
 
     def test_asset_library_package_is_persisted_published_and_downloadable(self):
         created = self.upload_library()
@@ -109,6 +128,18 @@ class StudioAPIContractTests(APITestCase):
         self.assertEqual(package_record["filename"], "sekar.batikpack")
         self.assertEqual(len(package_record["sha256"]), 64)
 
+        # Publish ditolak selama fee bidding belum lunas.
+        unpaid = self.client.post(
+            reverse("api-nft-publish", args=[nft.pk]),
+            {},
+            format="json",
+        )
+        self.assertEqual(unpaid.status_code, 402, unpaid.data)
+        self.assertEqual(unpaid.data["listing_fee"]["fee_percent"], "5.00")
+        self.assertEqual(unpaid.data["listing_fee"]["vat_percent"], "11.00")
+        self.assertFalse(unpaid.data["listing_fee"]["refundable"])
+
+        settle_listing_fee(nft)
         published = self.client.post(
             reverse("api-nft-publish", args=[nft.pk]),
             {},
@@ -130,6 +161,7 @@ class StudioAPIContractTests(APITestCase):
         created = self.upload_library()
         self.assertEqual(created.status_code, 201, created.data)
         nft = NFTAsset.objects.get(pk=created.data["id"])
+        settle_listing_fee(nft)
         self.client.post(
             reverse("api-nft-publish", args=[nft.pk]),
             {},

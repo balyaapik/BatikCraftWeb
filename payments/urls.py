@@ -6,6 +6,11 @@ app_name = "payments"
 
 urlpatterns = [
     path(
+        "nfts/<int:pk>/listing-fee/checkout/",
+        views.start_listing_fee_checkout,
+        name="start_listing_fee_checkout",
+    ),
+    path(
         "settlements/<uuid:public_id>/checkout/",
         views.start_xendit_checkout,
         name="start_checkout",

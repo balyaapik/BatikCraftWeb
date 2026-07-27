@@ -61,6 +61,9 @@ class UserSerializer(serializers.ModelSerializer):
             "public_name",
             "bio",
             "wallet_address",
+            "payout_bank_code",
+            "payout_account_number",
+            "payout_account_holder",
         )
         read_only_fields = ("id", "username", "role")
 
@@ -146,6 +149,13 @@ class NFTAssetSerializer(serializers.ModelSerializer):
         read_only=True,
     )
     is_auction_open = serializers.BooleanField(read_only=True)
+    listing_fee_status = serializers.SerializerMethodField()
+
+    def get_listing_fee_status(self, obj):
+        invoice = getattr(obj, "listing_fee_invoice", None)
+        if invoice is None:
+            return "not_issued"
+        return invoice.status
 
     class Meta:
         model = NFTAsset
@@ -170,6 +180,7 @@ class NFTAssetSerializer(serializers.ModelSerializer):
             "current_price",
             "bid_count",
             "is_auction_open",
+            "listing_fee_status",
             "auction_starts_at",
             "auction_ends_at",
             "created_at",

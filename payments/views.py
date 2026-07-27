@@ -16,8 +16,10 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
-from core.models import AuctionSettlement
+from core.models import AuctionSettlement, NFTAsset
 
+from .models import ListingFeeInvoice, PaymentGatewayAttempt
+from .services import apply_verified_xendit_status, issue_listing_fee_invoice
 from .xendit import (
     XenditError,
     create_invoice,
@@ -29,8 +31,6 @@ from .xendit import (
     verified_event_key,
     verify_webhook_token,
 )
-from .models import PaymentGatewayAttempt
-from .services import apply_verified_xendit_status
 
 logger = logging.getLogger(__name__)
 
@@ -52,10 +52,10 @@ def _authorized_settlement(request, public_id, *, lock=False):
     return settlement
 
 
-def _active_attempt(settlement):
+def _active_attempt(billable):
     now = timezone.now()
     return (
-        settlement.gateway_attempts.filter(
+        billable.gateway_attempts.filter(
             status__in=[
                 PaymentGatewayAttempt.Status.CREATED,
                 PaymentGatewayAttempt.Status.PENDING,
@@ -64,6 +64,13 @@ def _active_attempt(settlement):
         .filter(Q(expires_at__isnull=True) | Q(expires_at__gt=now))
         .first()
     )
+
+
+def _resolve_fee_invoice(request, nft_pk):
+    nft = get_object_or_404(NFTAsset, pk=nft_pk)
+    if not (request.user.is_superuser or nft.owner_id == request.user.id):
+        raise Http404("NFT tidak ditemukan.")
+    return nft
 
 
 def _validate_verified_invoice(attempt, payload):
@@ -135,6 +142,78 @@ def start_xendit_checkout(request, public_id):
         logger.warning("Xendit checkout failed for %s: %s", order_id, exc)
         messages.error(request, f"Checkout gagal dibuat: {exc}")
         return redirect("settlement_detail", public_id=public_id)
+
+    PaymentGatewayAttempt.objects.filter(pk=attempt.pk).update(
+        status=PaymentGatewayAttempt.Status.PENDING,
+        invoice_id=str(response["id"]),
+        invoice_url=str(response["invoice_url"]),
+        gateway_response=response,
+    )
+    return HttpResponseRedirect(str(response["invoice_url"]))
+
+
+@login_required
+@require_POST
+def start_listing_fee_checkout(request, pk):
+    """Bayar fee bidding agar NFT dapat tayang di market.
+
+    Fee wajib dilunasi sebelum listing aktif dan tidak dikembalikan, baik
+    karya tersebut nantinya terjual maupun tidak.
+    """
+    if not is_enabled():
+        messages.error(request, "Xendit belum dikonfigurasi oleh administrator.")
+        return redirect("creator_dashboard")
+
+    with transaction.atomic():
+        nft = _resolve_fee_invoice(request, pk)
+        if nft.starting_price <= 0:
+            messages.error(
+                request,
+                "Tetapkan harga awal sebelum membayar fee bidding.",
+            )
+            return redirect("creator_dashboard")
+        if nft.status in {NFTAsset.Status.AWAITING_PAYMENT, NFTAsset.Status.SOLD}:
+            messages.error(
+                request,
+                "NFT yang sedang ditagihkan atau sudah terjual tidak perlu fee baru.",
+            )
+            return redirect("creator_dashboard")
+
+        fee_invoice = issue_listing_fee_invoice(nft)
+        if fee_invoice.status == ListingFeeInvoice.Status.PAID:
+            messages.info(request, "Fee bidding untuk NFT ini sudah lunas.")
+            return redirect("creator_dashboard")
+
+        existing = _active_attempt(fee_invoice)
+        if existing:
+            if existing.invoice_url:
+                return HttpResponseRedirect(existing.invoice_url)
+            messages.info(request, "Checkout sedang dibuat. Silakan coba kembali.")
+            return redirect("creator_dashboard")
+
+        expiry = min(fee_invoice.due_at, timezone.now() + timedelta(days=7))
+        order_id = f"BCFEE-{fee_invoice.public_id.hex[:20]}-{uuid.uuid4().hex[:8]}"
+        attempt = PaymentGatewayAttempt.objects.create(
+            purpose=PaymentGatewayAttempt.Purpose.LISTING_FEE,
+            listing_fee=fee_invoice,
+            provider=PaymentGatewayAttempt.Provider.XENDIT,
+            environment=environment_name(),
+            order_id=order_id,
+            amount=fee_invoice.total_amount,
+            expires_at=expiry,
+        )
+
+    finish_url = request.build_absolute_uri(reverse("creator_dashboard"))
+    try:
+        response = create_invoice(attempt, finish_url)
+    except XenditError as exc:
+        PaymentGatewayAttempt.objects.filter(pk=attempt.pk).update(
+            status=PaymentGatewayAttempt.Status.FAILED,
+            gateway_response={"error": str(exc)},
+        )
+        logger.warning("Xendit listing fee checkout failed for %s: %s", order_id, exc)
+        messages.error(request, f"Checkout fee gagal dibuat: {exc}")
+        return redirect("creator_dashboard")
 
     PaymentGatewayAttempt.objects.filter(pk=attempt.pk).update(
         status=PaymentGatewayAttempt.Status.PENDING,

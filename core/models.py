@@ -1,11 +1,18 @@
 import uuid
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
+
+MONEY_QUANTUM = Decimal("0.01")
+
+
+def quantize_money(value: Decimal) -> Decimal:
+    """Bulatkan nilai uang ke dua desimal dengan pembulatan setengah ke atas."""
+    return Decimal(value).quantize(MONEY_QUANTUM, rounding=ROUND_HALF_UP)
 
 
 class User(AbstractUser):
@@ -22,10 +29,25 @@ class User(AbstractUser):
     bio = models.TextField(blank=True)
     wallet_address = models.CharField(max_length=128, blank=True)
     avatar = models.ImageField(upload_to="avatars/", blank=True, null=True)
+    payout_bank_code = models.CharField(
+        max_length=32,
+        blank=True,
+        help_text="Kode channel disbursement Xendit, contoh BCA atau ID_BCA.",
+    )
+    payout_account_number = models.CharField(max_length=64, blank=True)
+    payout_account_holder = models.CharField(max_length=150, blank=True)
 
     @property
     def public_name(self):
         return self.display_name or self.get_full_name() or self.username
+
+    @property
+    def has_payout_account(self):
+        return bool(
+            self.payout_bank_code
+            and self.payout_account_number
+            and self.payout_account_holder
+        )
 
 
 class BlogPost(models.Model):
@@ -240,7 +262,29 @@ class AuctionSettlement(models.Model):
         on_delete=models.PROTECT,
         related_name="auction_purchases",
     )
-    amount = models.DecimalField(max_digits=18, decimal_places=2)
+    subtotal_amount = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="Nilai bid pemenang sebelum PPN.",
+    )
+    vat_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("11.00"),
+        help_text="Tarif PPN yang berlaku saat invoice dibuat.",
+    )
+    vat_amount = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="Nilai PPN yang ditagihkan kepada buyer.",
+    )
+    amount = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        help_text="Total yang harus dibayar buyer (subtotal + PPN).",
+    )
     status = models.CharField(
         max_length=24,
         choices=Status.choices,
@@ -283,6 +327,19 @@ class AuctionSettlement(models.Model):
         if not self.invoice_number:
             date_part = timezone.now().strftime("%Y%m%d")
             self.invoice_number = f"BCINV-{date_part}-{uuid.uuid4().hex[:10].upper()}"
+        # Pemanggil lama hanya mengisi `amount`. Turunkan subtotal dan PPN dari
+        # nilai bid pemenang agar total selalu = subtotal + PPN.
+        if not self.subtotal_amount and self.winning_bid_id:
+            self.subtotal_amount = self.winning_bid.amount
+        if self.subtotal_amount:
+            expected_vat = quantize_money(
+                self.subtotal_amount * (self.vat_percent / Decimal(100))
+            )
+            if self.vat_amount != expected_vat:
+                self.vat_amount = expected_vat
+            expected_total = self.subtotal_amount + self.vat_amount
+            if self.amount != expected_total:
+                self.amount = expected_total
         super().save(*args, **kwargs)
 
     @property
@@ -309,6 +366,11 @@ class AuctionSettlement(models.Model):
                 errors["creator"] = "Creator harus sama dengan pemilik awal NFT."
         if self.amount is not None and self.amount <= 0:
             errors["amount"] = "Nilai invoice harus lebih dari nol."
+        if self.subtotal_amount and self.amount is not None:
+            if self.amount != self.subtotal_amount + self.vat_amount:
+                errors["amount"] = (
+                    "Total invoice harus sama dengan subtotal ditambah PPN."
+                )
         if errors:
             raise ValidationError(errors)
 

@@ -93,8 +93,8 @@ class XenditPaymentFlowTests(TestCase):
         return {
             "id": "xendit-invoice-001",
             "external_id": "BCPAY-TEST-001",
-            "amount": "150000.00",
-            "paid_amount": "150000.00",
+            "amount": str(self.settlement.amount),
+            "paid_amount": str(self.settlement.amount),
             "status": status,
             "payment_method": "QRIS",
             "paid_at": "2026-07-21T12:00:00.000Z",
@@ -153,7 +153,7 @@ class XenditPaymentFlowTests(TestCase):
         self._attempt()
         payload = self._notification()
         verified = dict(payload)
-        verified["amount"] = "149000.00"
+        verified["amount"] = str(self.settlement.amount - Decimal("1000.00"))
         get_invoice.return_value = verified
         response = self.client.post(
             reverse("payments:xendit_webhook"),

@@ -63,7 +63,11 @@ class CloseExpiredAuctionsTests(TestCase):
         self.assertEqual(settlement.status, AuctionSettlement.Status.INVOICED)
         self.assertEqual(settlement.buyer, self.buyer)
         self.assertEqual(settlement.creator, self.creator)
-        self.assertEqual(settlement.amount, Decimal("150000.00"))
+        self.assertEqual(settlement.subtotal_amount, Decimal("150000.00"))
+        self.assertEqual(settlement.vat_percent, Decimal("11.00"))
+        self.assertEqual(settlement.vat_amount, Decimal("16500.00"))
+        # PPN 11% ditambahkan di invoice buyer.
+        self.assertEqual(settlement.amount, Decimal("166500.00"))
 
     def test_nft_status_becomes_awaiting_payment(self):
         nft = _listed_nft(self.creator)

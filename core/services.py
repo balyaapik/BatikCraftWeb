@@ -7,17 +7,25 @@ be called safely from management commands, Celery tasks, or tests.
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Sequence
+from decimal import Decimal
 
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from .models import AuctionSettlement, NFTAsset
+from .models import AuctionSettlement, NFTAsset, quantize_money
 
 logger = logging.getLogger(__name__)
+
+
+def current_vat_percent():
+    """Tarif PPN aktif. Diimpor lazy agar core tidak bergantung pada payments saat boot."""
+    from payments.services import current_vat_percent as _current
+
+    return _current()
 
 
 # ---------------------------------------------------------------------------
@@ -105,12 +113,19 @@ def _close_single_auction(nft: NFTAsset) -> AuctionCloseResult:
                 "Silakan klik tombol 'Bayar dengan QRIS' di halaman invoice."
             ),
         )
+        vat_percent = current_vat_percent()
+        vat_amount = quantize_money(
+            winning_bid.amount * (vat_percent / Decimal(100))
+        )
         settlement = AuctionSettlement.objects.create(
             nft=nft,
             winning_bid=winning_bid,
             creator=nft.owner,
             buyer=winning_bid.bidder,
-            amount=winning_bid.amount,
+            subtotal_amount=winning_bid.amount,
+            vat_percent=vat_percent,
+            vat_amount=vat_amount,
+            amount=winning_bid.amount + vat_amount,
             payment_method=AuctionSettlement.PaymentMethod.OTHER,
             payment_instructions=payment_instructions,
             payment_due_at=timezone.now() + timedelta(hours=_payment_due_hours()),

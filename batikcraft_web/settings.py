@@ -84,9 +84,13 @@ TEMPLATES = [
 WSGI_APPLICATION = "batikcraft_web.wsgi.application"
 ASGI_APPLICATION = "batikcraft_web.asgi.application"
 
+_DEFAULT_DATABASE_URL = f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
+# `.env.example` mengirim DATABASE_URL kosong untuk mode SQLite. Versi baru
+# dj-database-url menganggap variabel kosong sebagai "sudah diset" dan
+# mengembalikan konfigurasi kosong, sehingga quickstart di README gagal start.
 DATABASES = {
-    "default": dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+    "default": dj_database_url.parse(
+        os.environ.get("DATABASE_URL", "").strip() or _DEFAULT_DATABASE_URL,
         conn_max_age=60,
         conn_health_checks=True,
     )

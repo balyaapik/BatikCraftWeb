@@ -129,6 +129,69 @@ Authorization: Token <TOKEN>
 NFT wajib memiliki gambar dan `starting_price > 0`. Pustaka aset juga wajib memiliki
 file `.batikpack` yang berhasil disimpan server.
 
+Selain itu **fee bidding harus lunas** sebelum listing tayang. Bila belum,
+endpoint membalas `402 Payment Required` beserta rincian tagihan:
+
+```json
+{
+  "detail": "Fee bidding harus dilunasi sebelum NFT tayang di market.",
+  "listing_fee": {
+    "status": "pending",
+    "invoice_number": "BCFEE-20260727-A1B2C3D4E5",
+    "currency": "IDR",
+    "base_amount": "200000.00",
+    "fee_percent": "5.00",
+    "fee_amount": "10000.00",
+    "vat_percent": "11.00",
+    "vat_amount": "1100.00",
+    "total_amount": "11100.00",
+    "due_at": "2026-07-29T10:00:00+00:00",
+    "paid_at": null,
+    "checkout_url": "https://web.batikcraft.id/payments/nfts/12/listing-fee/checkout/",
+    "refundable": false
+  }
+}
+```
+
+Studio membuka `checkout_url` di browser agar creator membayar melalui payment
+gateway, lalu mengulang `publish` setelah status berubah menjadi `paid`.
+
+## 5b. Fee bidding creator
+
+```http
+GET  /api/v1/nfts/{id}/listing-fee/
+POST /api/v1/nfts/{id}/listing-fee/
+Authorization: Token <TOKEN>
+```
+
+`GET` mengembalikan estimasi bila tagihan belum diterbitkan (`status`:
+`not_issued`), sehingga Studio dapat menampilkan biaya sebelum creator memutuskan
+untuk publish. `POST` menerbitkan tagihan resmi.
+
+Aturan yang berlaku:
+
+- Fee dihitung dari **persentase harga terendah** (`starting_price`) yang
+  dicantumkan creator, dengan batas fee minimum.
+- **PPN 11%** ditambahkan di atas fee tersebut.
+- Fee **tidak dikembalikan**: terjual atau tidak terjual, creator tetap membayar
+  fee beserta PPN-nya.
+- Tarif yang berlaku dapat dibaca dari blok `billing` pada endpoint kemampuan
+  server.
+
+## 5c. PPN pada invoice buyer
+
+Invoice pemenang lelang memuat tiga nilai:
+
+| Field | Arti |
+| --- | --- |
+| `subtotal_amount` | Nilai bid pemenang |
+| `vat_amount` | PPN 11% dari subtotal |
+| `amount` | Total yang harus dibayar buyer |
+
+Setelah buyer melunasi invoice melalui payment gateway, NFT diterbitkan ke akun
+buyer dan payout senilai `subtotal_amount` dicatat untuk creator. PPN bukan hak
+creator sehingga tidak ikut dibayarkan pada payout.
+
 ## 6. Daftar NFT dan bidding
 
 ```http

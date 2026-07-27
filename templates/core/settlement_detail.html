@@ -11,7 +11,9 @@
   <div class="settlement-grid">
     <article class="settlement-card"><h2>Ringkasan transaksi</h2><dl>
       <div><dt>NFT</dt><dd><a href="{% url 'nft_detail' settlement.nft.pk %}">{{ settlement.nft.title }}</a></dd></div>
-      <div><dt>Bid pemenang</dt><dd>Rp{{ settlement.amount|floatformat:0 }}</dd></div>
+      <div><dt>Bid pemenang</dt><dd>Rp{{ settlement.subtotal_amount|floatformat:0 }}</dd></div>
+      <div><dt>PPN {{ settlement.vat_percent|floatformat:0 }}%</dt><dd>Rp{{ settlement.vat_amount|floatformat:0 }}</dd></div>
+      <div><dt><strong>Total tagihan</strong></dt><dd><strong>Rp{{ settlement.amount|floatformat:0 }}</strong></dd></div>
       <div><dt>Metode</dt><dd>{{ settlement.get_payment_method_display }}</dd></div>
       <div><dt>Batas pembayaran</dt><dd>{{ settlement.payment_due_at|date:'d M Y, H:i' }}</dd></div>
     </dl></article>

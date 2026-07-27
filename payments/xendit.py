@@ -141,7 +141,12 @@ def amount_as_integer(amount: Decimal) -> int:
 
 
 def create_invoice(attempt, finish_url: str) -> dict:
-    settlement = attempt.settlement
+    billable = attempt.billable
+    if billable is None:
+        raise XenditAPIError("Tagihan gateway tidak memiliki objek pembayaran.")
+    if attempt.purpose == attempt.Purpose.LISTING_FEE:
+        return create_listing_fee_invoice(attempt, finish_url)
+    settlement = billable
     due_at = attempt.expires_at or settlement.payment_due_at
     seconds = max(0, (due_at - timezone.now()).total_seconds())
     if seconds < 300:
@@ -165,6 +170,88 @@ def create_invoice(attempt, finish_url: str) -> dict:
     if not response.get("id") or not response.get("invoice_url"):
         raise XenditAPIError("Xendit tidak mengembalikan invoice URL.")
     return response
+
+
+def create_listing_fee_invoice(attempt, finish_url: str) -> dict:
+    """Buat invoice Xendit untuk fee bidding yang dibayar creator di muka."""
+    fee_invoice = attempt.listing_fee
+    due_at = attempt.expires_at or fee_invoice.due_at
+    seconds = max(0, (due_at - timezone.now()).total_seconds())
+    if seconds < 300:
+        raise XenditAPIError("Sisa waktu pembayaran kurang dari lima menit.")
+
+    payload = {
+        "external_id": attempt.order_id,
+        "amount": amount_as_integer(attempt.amount),
+        "currency": "IDR",
+        "description": (
+            f"Fee bidding {fee_invoice.invoice_number} — {fee_invoice.nft.title}"
+        )[:255],
+        "invoice_duration": min(7 * 24 * 60 * 60, math.floor(seconds)),
+        "payment_methods": ["QRIS"],
+        "success_redirect_url": finish_url,
+        "failure_redirect_url": finish_url,
+        "should_send_email": False,
+        "items": [
+            {
+                "name": "Fee bidding listing",
+                "quantity": 1,
+                "price": amount_as_integer(fee_invoice.fee_amount),
+            }
+        ],
+        "fees": [
+            {
+                "type": f"PPN {fee_invoice.vat_percent}%",
+                "value": amount_as_integer(fee_invoice.vat_amount),
+            }
+        ],
+    }
+    if fee_invoice.creator.email:
+        payload["payer_email"] = fee_invoice.creator.email
+
+    response = _request_json("POST", "https://api.xendit.co/v2/invoices", payload)
+    if not response.get("id") or not response.get("invoice_url"):
+        raise XenditAPIError("Xendit tidak mengembalikan invoice URL.")
+    return response
+
+
+def create_payout(payout) -> dict:
+    """Kirim perintah disbursement ke Xendit untuk membayar creator."""
+    creator = payout.creator
+    if not creator.has_payout_account:
+        raise XenditConfigurationError(
+            "Creator belum melengkapi rekening tujuan payout."
+        )
+    payload = {
+        "reference_id": payout.reference_id,
+        "channel_code": payout.bank_name or creator.payout_bank_code,
+        "channel_properties": {
+            "account_number": payout.account_number or creator.payout_account_number,
+            "account_holder_name": (
+                payout.account_holder or creator.payout_account_holder
+            ),
+        },
+        "amount": amount_as_integer(payout.amount),
+        "currency": "IDR",
+        "description": f"Payout lelang {payout.settlement.invoice_number}"[:255],
+    }
+    response = _request_json(
+        "POST",
+        "https://api.xendit.co/v2/payouts",
+        payload,
+    )
+    if not response.get("id"):
+        raise XenditAPIError("Xendit tidak mengembalikan referensi payout.")
+    return response
+
+
+def classify_payout_status(payload: dict) -> str:
+    status = str(payload.get("status", "") or "").upper()
+    if status in {"SUCCEEDED", "COMPLETED"}:
+        return "success"
+    if status in {"FAILED", "REVERSED", "CANCELLED", "CANCELED", "EXPIRED"}:
+        return "failed"
+    return "processing"
 
 
 def get_invoice(invoice_id: str) -> dict:

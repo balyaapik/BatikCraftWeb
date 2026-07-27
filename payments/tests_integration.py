@@ -107,8 +107,12 @@ class XenditIntegrationTests(TestCase):
             expires_at=expires_at,
         )
 
-    def _payload(self, *, xendit_status="PAID", amount="250000.00",
+    def _payload(self, *, xendit_status="PAID", amount=None,
                  invoice_id="xi-001", order_id="BCPAY-INT-001"):
+        if amount is None:
+            # Total invoice buyer sudah termasuk PPN, jadi selalu turunkan dari
+            # settlement agar tes ikut menguji nominal ber-PPN.
+            amount = str(self.settlement.amount)
         return {
             "id": invoice_id,
             "external_id": order_id,
@@ -153,7 +157,11 @@ class XenditIntegrationTests(TestCase):
         attempt = self.settlement.gateway_attempts.get()
         self.assertEqual(attempt.status, PaymentGatewayAttempt.Status.PENDING)
         self.assertEqual(attempt.provider, PaymentGatewayAttempt.Provider.XENDIT)
-        self.assertEqual(attempt.amount, Decimal("250000.00"))
+        self.assertEqual(attempt.amount, self.settlement.amount)
+        self.assertEqual(
+            self.settlement.amount,
+            self.settlement.subtotal_amount + self.settlement.vat_amount,
+        )
         self.assertEqual(attempt.invoice_id, "xi-new")
         self.assertEqual(attempt.invoice_url, "https://checkout.xendit.co/web/xi-new")
         self.assertIsNotNone(attempt.expires_at)

@@ -3,11 +3,24 @@ from pathlib import Path
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
 from .captcha import CAPTCHA_SESSION_KEY, captcha_answer_for_nonce
 from .models import Bid, ModelAsset, ModelPurchase, NFTAsset, User
+
+
+def settle_listing_fee(nft):
+    """Lunasi fee bidding agar NFT dapat dipublikasikan dalam pengujian."""
+    from payments.models import ListingFeeInvoice
+    from payments.services import issue_listing_fee_invoice
+
+    invoice = issue_listing_fee_invoice(nft)
+    invoice.status = ListingFeeInvoice.Status.PAID
+    invoice.paid_at = timezone.now()
+    invoice.save(update_fields=["status", "paid_at", "updated_at"])
+    return invoice
 
 
 class BatikCraftAPITests(APITestCase):
@@ -125,6 +138,14 @@ class BatikCraftAPITests(APITestCase):
         )
         self.assertEqual(response.status_code, 201)
         nft_id = response.data["id"]
+        # Fee bidding wajib lunas sebelum listing tayang.
+        blocked = self.client.post(
+            reverse("api-nft-publish", args=[nft_id]),
+            {},
+            format="json",
+        )
+        self.assertEqual(blocked.status_code, 402, blocked.data)
+        settle_listing_fee(NFTAsset.objects.get(pk=nft_id))
         publish = self.client.post(
             reverse("api-nft-publish", args=[nft_id]),
             {},
