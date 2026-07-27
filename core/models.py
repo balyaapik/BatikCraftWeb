@@ -1,5 +1,6 @@
 import uuid
 from decimal import ROUND_HALF_UP, Decimal
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError, available_timezones
 
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
@@ -8,6 +9,21 @@ from django.urls import reverse
 from django.utils import timezone
 
 MONEY_QUANTUM = Decimal("0.01")
+
+
+def available_timezones_sorted():
+    """Daftar zona waktu IANA yang dapat dipilih, terurut."""
+    return sorted(available_timezones())
+
+
+def is_valid_timezone(name: str) -> bool:
+    if not name:
+        return False
+    try:
+        ZoneInfo(name)
+    except (ZoneInfoNotFoundError, ValueError, KeyError):
+        return False
+    return True
 
 
 def quantize_money(value: Decimal) -> Decimal:
@@ -29,6 +45,14 @@ class User(AbstractUser):
     bio = models.TextField(blank=True)
     wallet_address = models.CharField(max_length=128, blank=True)
     avatar = models.ImageField(upload_to="avatars/", blank=True, null=True)
+    timezone_name = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text=(
+            "Zona waktu tampilan pengguna. Kosongkan untuk mengikuti zona waktu "
+            "default marketplace."
+        ),
+    )
     payout_bank_code = models.CharField(
         max_length=32,
         blank=True,
@@ -42,12 +66,62 @@ class User(AbstractUser):
         return self.display_name or self.get_full_name() or self.username
 
     @property
+    def active_timezone(self):
+        """Zona waktu efektif: pilihan pengguna, jika kosong ikut default marketplace."""
+        if self.timezone_name and is_valid_timezone(self.timezone_name):
+            return self.timezone_name
+        return MarketplaceSetting.load().default_timezone
+
+    @property
     def has_payout_account(self):
         return bool(
             self.payout_bank_code
             and self.payout_account_number
             and self.payout_account_holder
         )
+
+
+class MarketplaceSetting(models.Model):
+    """Preferensi marketplace yang berlaku global dan dapat diubah administrator.
+
+    Batas waktu lelang tetap disimpan dalam UTC. Zona waktu di sini hanya
+    menentukan bagaimana waktu ditampilkan dan bagaimana masukan tanpa offset
+    ditafsirkan, sehingga creator dan buyer di zona waktu berbeda tetap melihat
+    tenggat yang sama secara absolut.
+    """
+
+    singleton_id = models.PositiveSmallIntegerField(primary_key=True, default=1)
+    default_timezone = models.CharField(
+        max_length=64,
+        default="Asia/Jakarta",
+        help_text="Zona waktu default untuk batas waktu lelang dan pembayaran.",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Marketplace Setting"
+        verbose_name_plural = "Marketplace Settings"
+
+    def __str__(self):
+        return f"Zona waktu marketplace: {self.default_timezone}"
+
+    def save(self, *args, **kwargs):
+        self.singleton_id = 1
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Konfigurasi marketplace tidak dapat dihapus.")
+
+    def clean(self):
+        if not is_valid_timezone(self.default_timezone):
+            raise ValidationError(
+                {"default_timezone": "Zona waktu tidak dikenal (contoh: Asia/Jakarta)."}
+            )
+
+    @classmethod
+    def load(cls):
+        instance, _ = cls.objects.get_or_create(singleton_id=1)
+        return instance
 
 
 class BlogPost(models.Model):

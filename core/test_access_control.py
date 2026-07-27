@@ -3,7 +3,7 @@
 from decimal import Decimal
 
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
@@ -184,6 +184,7 @@ class MultipartModelUploadTests(TestCase):
         self.assertIn("model_file", response.data)
 
 
+@override_settings(BATIKCRAFT_REQUIRE_STUDIO_PACKAGE=False)
 class OptionalSourceIdentifierTests(TestCase):
     """Studio identifiers are optional, but must stay unique per account."""
 

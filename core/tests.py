@@ -1,3 +1,4 @@
+import json
 from decimal import Decimal
 from pathlib import Path
 
@@ -124,19 +125,32 @@ class BatikCraftAPITests(APITestCase):
         self.assertEqual(profile.data["username"], "creator")
 
     def test_creator_can_upload_and_publish_nft(self):
+        from .test_timezone_and_studio_origin import (
+            build_studio_package,
+            jpeg_preview,
+        )
+
         self.auth(self.creator_token)
+        preview = jpeg_preview()
         response = self.client.post(
             reverse("api-nft-list"),
             {
                 "title": "Mega Mendung Digital",
-                "image_url": "https://example.com/batik.png",
                 "starting_price": "100000.00",
                 "source_project_id": "studio-project-001",
-                "metadata": {"motif": "mega mendung"},
+                "metadata": json.dumps({"motif": "mega mendung"}),
+                "image": SimpleUploadedFile(
+                    "preview.jpg", preview, content_type="image/jpeg"
+                ),
+                "package_file": SimpleUploadedFile(
+                    "motif.batikcraftnft",
+                    build_studio_package(preview),
+                    content_type="application/zip",
+                ),
             },
-            format="json",
+            format="multipart",
         )
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, 201, response.data)
         nft_id = response.data["id"]
         # Fee bidding wajib lunas sebelum listing tayang.
         blocked = self.client.post(

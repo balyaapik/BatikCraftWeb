@@ -5,6 +5,7 @@ from .models import (
     AuctionSettlement,
     Bid,
     BlogPost,
+    MarketplaceSetting,
     ModelAsset,
     ModelPurchase,
     NFTAsset,
@@ -24,6 +25,10 @@ class CustomUserAdmin(UserAdmin):
                     "bio",
                     "wallet_address",
                     "avatar",
+                    "timezone_name",
+                    "payout_bank_code",
+                    "payout_account_number",
+                    "payout_account_holder",
                 )
             },
         ),
@@ -143,3 +148,16 @@ class BlogPostAdmin(admin.ModelAdmin):
     )
     list_filter = ("is_published",)
     prepopulated_fields = {"slug": ("title",)}
+
+
+@admin.register(MarketplaceSetting)
+class MarketplaceSettingAdmin(admin.ModelAdmin):
+    list_display = ("default_timezone", "updated_at")
+    readonly_fields = ("updated_at",)
+
+    def has_add_permission(self, request):
+        # Konfigurasi bersifat singleton; baris dibuat otomatis oleh load().
+        return not MarketplaceSetting.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False

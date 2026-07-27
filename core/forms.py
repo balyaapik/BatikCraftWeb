@@ -4,7 +4,15 @@ from django import forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 
 from .captcha import issue_captcha, verify_captcha
-from .models import AuctionSettlement, Bid, ModelAsset, NFTAsset, User
+from .models import (
+    AuctionSettlement,
+    Bid,
+    MarketplaceSetting,
+    ModelAsset,
+    NFTAsset,
+    User,
+    available_timezones_sorted,
+)
 
 
 def _captcha_field() -> forms.CharField:
@@ -87,6 +95,12 @@ class CaptchaAuthenticationForm(_CaptchaValidationMixin, AuthenticationForm):
 
 
 class ProfileForm(forms.ModelForm):
+    timezone_name = forms.ChoiceField(
+        required=False,
+        label="Zona waktu",
+        help_text="Kosongkan untuk mengikuti zona waktu default marketplace.",
+    )
+
     class Meta:
         model = User
         fields = (
@@ -95,18 +109,32 @@ class ProfileForm(forms.ModelForm):
             "bio",
             "wallet_address",
             "avatar",
+            "timezone_name",
         )
         widgets = {"bio": forms.Textarea(attrs={"rows": 4})}
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        default = MarketplaceSetting.load().default_timezone
+        self.fields["timezone_name"].choices = [
+            ("", f"Ikuti default marketplace ({default})"),
+            *((name, name) for name in available_timezones_sorted()),
+        ]
+
 
 class NFTForm(forms.ModelForm):
+    """Form web untuk menyunting metadata NFT.
+
+    Gambar sengaja tidak ada di sini: karya hanya boleh masuk melalui paket
+    .batikcraftnft yang diunggah BatikCraft Studio lewat API, sehingga gambar
+    yang beredar di market selalu berasal dari proyek Studio yang utuh.
+    """
+
     class Meta:
         model = NFTAsset
         fields = (
             "title",
             "description",
-            "image",
-            "image_url",
             "starting_price",
             "reserve_price",
             "auction_starts_at",
