@@ -17,7 +17,18 @@ No authentication required. Returns the contract version, the minimum Studio ver
 the page size, source package limits, the current `billing` rates, and feature flags for
 NFTs, bidding, models, the library, package upload, and package download.
 
-Read this before assuming a feature exists.
+Contract `1.4` adds:
+
+```json
+{
+  "features": {
+    "asset_library_sealed_envelope": true,
+    "asset_library_installable_download": true
+  }
+}
+```
+
+Read this endpoint before assuming a feature exists.
 
 ---
 
@@ -61,16 +72,36 @@ Authorization: Token <TOKEN>
 
 ## 4. Uploading an NFT or Asset Library
 
-Accepts JSON with an `image_url`, or `multipart/form-data` with an `image` file. An
-optional source package is sent as `package_file`:
+The secure default contract uses `multipart/form-data` with:
 
-| Kind | Package extension |
-| --- | --- |
-| NFT motif | `.batikcraftnft` |
-| Asset library | `.batikpack` |
+- `image`: the preview image;
+- `package_file`: a sealed `.batikcraftnft` produced by BatikCraft Studio.
 
-An asset library with `metadata.source_type = "asset_library"` **must** include a
-`package_file` before it can be published.
+Although the serializer still exposes `image_url` for migration compatibility, the default
+`BATIKCRAFT_REQUIRE_STUDIO_PACKAGE=True` setting rejects external image URLs and images
+without a matching sealed package.
+
+| Kind | Uploaded package | Downloadable payload |
+| --- | --- | --- |
+| NFT motif | `.batikcraftnft` | the verified `.batikcraftnft` |
+| Asset library | `.batikcraftnft` envelope | embedded installable `.batikpack` |
+
+A standalone `.batikpack` is **not** accepted as provenance evidence because it does not
+bind a separately uploaded marketplace preview to the library contents. For an asset
+library, Studio creates an envelope such as:
+
+```text
+listing.batikcraftnft
+├── manifest.json
+├── seal.json
+├── preview.jpg
+├── project/project.json
+└── project/assets/library/<pack-id>.batikpack
+```
+
+The Web verifier checks the outer archive, the preview checksum, the embedded package
+checksum, safe paths, archive limits, the inner manifest, and every file referenced by the
+inner manifest. Exactly one `.batikpack` may be embedded.
 
 ```http
 POST /api/v1/nfts/
@@ -83,8 +114,8 @@ Principal fields:
 ```text
 title
 description
-image or image_url
-package_file        (.batikcraftnft / .batikpack; optional for a motif)
+image
+package_file        (.batikcraftnft)
 source_project_id
 source_app_version
 starting_price
@@ -112,9 +143,15 @@ Library metadata:
   "library_author": "Balya Rochmadi",
   "library_type": "ornamen",
   "asset_count": 12,
-  "sha256": "..."
+  "embedded_asset_path": "project/assets/library/pustaka-sekar.batikpack",
+  "embedded_asset_filename": "pustaka-sekar.batikpack",
+  "sha256": "<SHA-256 OF THE EMBEDDED BATIKPACK>"
 }
 ```
+
+When these optional embedded-package metadata fields are supplied, they must match the
+values discovered from the sealed envelope. A mismatch is rejected before an NFT record is
+kept.
 
 `source_project_id` is optional. When supplied it is unique per creator; a second upload
 with the same value is answered `400` on that field.
@@ -125,9 +162,9 @@ In `multipart/form-data`, JSON fields are accepted as JSON strings, and simple l
 accept a comma-separated form:
 
 ```text
-metadata      = {"canvas": {"width": 1920}}
-trigger_words = ["bcr_kawung", "bcr_parang"]
-trigger_words = bcr_kawung, bcr_parang
+metadata       = {"canvas": {"width": 1920}}
+trigger_words  = ["bcr_kawung", "bcr_parang"]
+trigger_words  = bcr_kawung, bcr_parang
 ```
 
 ---
@@ -139,16 +176,21 @@ POST /api/v1/nfts/{id}/publish/
 Authorization: Token <TOKEN>
 ```
 
-Requirements: an image, `starting_price > 0`, and — for an asset library — a
-successfully stored `.batikpack`.
+Requirements:
 
-The **listing fee must be paid** before the listing goes live. If it is not, the
-endpoint answers `402 Payment Required` with the full breakdown:
+- an image whose checksum matches the envelope preview;
+- `starting_price > 0`;
+- for an asset library, an extracted `.batikpack` that passed the inner-package verifier;
+- a paid creator listing fee.
+
+The **listing fee must be paid** before the listing goes live. If it is not, the endpoint
+answers `402 Payment Required` with the full breakdown:
 
 ```json
 {
-  "detail": "The listing fee must be settled before the NFT appears on the market.",
+  "detail": "Fee bidding harus dilunasi sebelum NFT tayang di market.",
   "listing_fee": {
+    "nft_id": 12,
     "status": "pending",
     "invoice_number": "BCFEE-20260727-A1B2C3D4E5",
     "currency": "IDR",
@@ -166,8 +208,9 @@ endpoint answers `402 Payment Required` with the full breakdown:
 }
 ```
 
-The Studio opens `checkout_url` in a browser so the creator can pay, then retries
-`publish` once the status becomes `paid`.
+Studio stores `listing_fee.nft_id`, opens `checkout_url`, and then retries
+`POST /api/v1/nfts/{id}/publish/` for that same draft. It must not upload the source package
+again after payment.
 
 ---
 
@@ -181,7 +224,7 @@ Authorization: Token <TOKEN>
 
 `GET` returns an estimate while no invoice has been raised (`status: "not_issued"`), so
 the Studio can show the cost before the creator commits to publishing. `POST` raises the
-formal invoice.
+formal invoice. Both responses include `nft_id`.
 
 The rules:
 
@@ -231,12 +274,29 @@ GET /api/v1/nfts/{id}/package/
 Authorization: Token <TOKEN>
 ```
 
-Access is granted only to the owner, a superuser, or the highest bidder once the auction
-has ended or the status is `sold`.
+Access is granted only to:
 
-The file is streamed through Django as an attachment. The response carries
-`X-BatikCraft-NFT-ID` and `X-BatikCraft-Package-SHA256`. Internal storage URLs are never
+- the creator who owns the listing;
+- a superuser; or
+- the buyer after the NFT is `sold` and its settlement is `minted` for that buyer.
+
+The file is streamed through Django as an attachment. Internal storage URLs are never
 exposed.
+
+For a normal motif NFT, the endpoint returns its verified `.batikcraftnft`. For an asset
+library, it returns the exact installable `.batikpack` extracted from the verified envelope,
+not the outer listing wrapper.
+
+Response headers:
+
+```text
+X-BatikCraft-NFT-ID
+X-BatikCraft-Package-SHA256
+X-BatikCraft-Package-Kind
+```
+
+`X-BatikCraft-Package-Kind` is `installable_asset_pack` for an asset-library download and
+`sealed_listing_envelope` or `source` for other source packages.
 
 ---
 
@@ -270,9 +330,14 @@ download URL that still requires the token.
 
 ## 10. Upload and Storage Limits
 
-The default source package limit is 512 MB, adjustable through the Django setting
-`BATIKCRAFT_MAX_PACKAGE_UPLOAD_SIZE`. Files are written through the active Django
-storage backend, so local, S3, and Cloudflare R2 configurations share one API contract.
+The default outer source-package upload limit is 512 MB, adjustable through the Django
+setting `BATIKCRAFT_MAX_PACKAGE_UPLOAD_SIZE`. The verifier also limits member count,
+single-member size, and total decompressed size for both the outer envelope and the inner
+asset pack.
+
+The outer `.batikcraftnft` and the extracted `.batikpack` are stored as separate objects.
+The active Django storage backend is used for both, so local, S3, and Cloudflare R2
+configurations share one API contract. Deleting the NFT removes both stored objects.
 
 ---
 
