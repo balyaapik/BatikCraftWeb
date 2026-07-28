@@ -18,6 +18,7 @@ import json
 import re
 import zipfile
 from dataclasses import dataclass
+from io import BytesIO
 from pathlib import PurePosixPath
 
 MANIFEST_PATH = "manifest.json"
@@ -94,7 +95,12 @@ def _decode_json(raw: bytes, label: str) -> dict:
 
 
 def _safe_path(value: object, label: str) -> str:
-    if not isinstance(value, str) or not value or "\\" in value or value.startswith("/"):
+    if (
+        not isinstance(value, str)
+        or not value
+        or "\\" in value
+        or value.startswith("/")
+    ):
         raise StudioPackageError(f"Path {label} tidak aman.")
     path = PurePosixPath(value)
     if any(part in {"", ".", ".."} for part in path.parts):
@@ -117,21 +123,29 @@ def _validated_members(
     if len(infos) > maximum_entries:
         raise StudioPackageError(f"{label} berisi terlalu banyak berkas.")
     by_path: dict[str, zipfile.ZipInfo] = {}
+    seen: set[str] = set()
     total = 0
     for info in infos:
         if info.is_dir():
             raise StudioPackageError(f"{label} tidak boleh memuat entri folder.")
         path = _safe_path(info.filename, label)
         key = path.casefold()
-        if any(existing.casefold() == key for existing in by_path):
+        if key in seen:
             raise StudioPackageError(f"Path ganda dalam {label}: {path!r}.")
+        seen.add(key)
         if info.flag_bits & 0x1:
-            raise StudioPackageError(f"Berkas terenkripsi tidak didukung: {path!r}.")
+            raise StudioPackageError(
+                f"Berkas terenkripsi tidak didukung: {path!r}."
+            )
         if info.file_size > maximum_member_bytes:
-            raise StudioPackageError(f"Berkas terlalu besar dalam {label}: {path!r}.")
+            raise StudioPackageError(
+                f"Berkas terlalu besar dalam {label}: {path!r}."
+            )
         total += info.file_size
         if total > maximum_total_bytes:
-            raise StudioPackageError(f"Ukuran hasil dekompresi {label} melebihi batas.")
+            raise StudioPackageError(
+                f"Ukuran hasil dekompresi {label} melebihi batas."
+            )
         by_path[path] = info
     return by_path
 
@@ -144,8 +158,6 @@ def verify_asset_pack_bytes(content: bytes) -> VerifiedAssetPack:
         raise StudioPackageError("Pustaka aset tertanam melebihi batas ukuran.")
 
     try:
-        from io import BytesIO
-
         with zipfile.ZipFile(BytesIO(content)) as archive:
             by_path = _validated_members(
                 archive,
@@ -156,10 +168,18 @@ def verify_asset_pack_bytes(content: bytes) -> VerifiedAssetPack:
             )
             manifest_info = by_path.get(MANIFEST_PATH)
             if manifest_info is None:
-                raise StudioPackageError("Asset pack tidak memiliki manifest.json di root.")
-            manifest = _decode_json(archive.read(manifest_info), "asset pack manifest.json")
-            if set(manifest) != {"format", "schema_version", "pack", "assets"}:
-                raise StudioPackageError("Field root manifest asset pack tidak valid.")
+                raise StudioPackageError(
+                    "Asset pack tidak memiliki manifest.json di root."
+                )
+            manifest = _decode_json(
+                archive.read(manifest_info),
+                "asset pack manifest.json",
+            )
+            expected_root = {"format", "schema_version", "pack", "assets"}
+            if set(manifest) != expected_root:
+                raise StudioPackageError(
+                    "Field root manifest asset pack tidak valid."
+                )
             if manifest.get("format") != ASSET_PACK_FORMAT:
                 raise StudioPackageError("Format asset pack tidak didukung.")
             if manifest.get("schema_version") != ASSET_PACK_SCHEMA_VERSION:
@@ -176,31 +196,50 @@ def verify_asset_pack_bytes(content: bytes) -> VerifiedAssetPack:
 
             assets = manifest.get("assets")
             if not isinstance(assets, list) or not assets:
-                raise StudioPackageError("Asset pack harus memuat sedikitnya satu asset.")
+                raise StudioPackageError(
+                    "Asset pack harus memuat sedikitnya satu asset."
+                )
             declared_files = {MANIFEST_PATH}
+            declared_files_folded = {MANIFEST_PATH.casefold()}
             asset_ids: set[str] = set()
             for index, raw in enumerate(assets):
                 item = _mapping(raw, f"asset pack.assets[{index}]")
                 asset_id = str(item.get("id") or "")
                 if not _IDENTIFIER_RE.fullmatch(asset_id) or asset_id in asset_ids:
-                    raise StudioPackageError("ID asset dalam asset pack tidak valid atau ganda.")
+                    raise StudioPackageError(
+                        "ID asset dalam asset pack tidak valid atau ganda."
+                    )
                 asset_ids.add(asset_id)
                 asset_path = _safe_path(item.get("file"), "asset pack asset")
                 if not asset_path.endswith(".batikasset"):
-                    raise StudioPackageError("File asset wajib berakhiran .batikasset.")
-                if asset_path in declared_files:
-                    raise StudioPackageError("File asset ganda dalam manifest asset pack.")
+                    raise StudioPackageError(
+                        "File asset wajib berakhiran .batikasset."
+                    )
+                asset_key = asset_path.casefold()
+                if asset_key in declared_files_folded:
+                    raise StudioPackageError(
+                        "File asset ganda dalam manifest asset pack."
+                    )
                 declared_files.add(asset_path)
+                declared_files_folded.add(asset_key)
                 thumbnail = item.get("thumbnail")
                 if thumbnail is not None:
-                    thumbnail_path = _safe_path(thumbnail, "asset pack thumbnail")
-                    if thumbnail_path in declared_files:
-                        raise StudioPackageError("Thumbnail ganda dalam manifest asset pack.")
+                    thumbnail_path = _safe_path(
+                        thumbnail,
+                        "asset pack thumbnail",
+                    )
+                    thumbnail_key = thumbnail_path.casefold()
+                    if thumbnail_key in declared_files_folded:
+                        raise StudioPackageError(
+                            "Thumbnail ganda dalam manifest asset pack."
+                        )
                     declared_files.add(thumbnail_path)
+                    declared_files_folded.add(thumbnail_key)
 
             if set(by_path) != declared_files:
                 raise StudioPackageError(
-                    "Isi asset pack tidak cocok dengan file yang dideklarasikan manifest."
+                    "Isi asset pack tidak cocok dengan file yang "
+                    "dideklarasikan manifest."
                 )
             return VerifiedAssetPack(
                 pack_id=pack_id,
@@ -211,7 +250,9 @@ def verify_asset_pack_bytes(content: bytes) -> VerifiedAssetPack:
     except StudioPackageError:
         raise
     except zipfile.BadZipFile as exc:
-        raise StudioPackageError("Pustaka aset tertanam bukan arsip yang dapat dibaca.") from exc
+        raise StudioPackageError(
+            "Pustaka aset tertanam bukan arsip yang dapat dibaca."
+        ) from exc
 
 
 def verify_studio_package(fileobj) -> VerifiedStudioPackage:
@@ -242,28 +283,45 @@ def verify_studio_package(fileobj) -> VerifiedStudioPackage:
             if seal.get("format") != SEAL_FORMAT:
                 raise StudioPackageError("Seal paket tidak dikenali.")
             if seal.get("manifest_sha256") != sha256_of(manifest_bytes):
-                raise StudioPackageError("Manifest paket sudah diubah setelah disegel.")
+                raise StudioPackageError(
+                    "Manifest paket sudah diubah setelah disegel."
+                )
             if seal.get("package_id") != manifest.get("package_id"):
                 raise StudioPackageError("Seal merujuk paket yang berbeda.")
 
             records = manifest.get("files")
             if not isinstance(records, list) or not records:
-                raise StudioPackageError("Manifest tidak mendaftarkan berkas apa pun.")
+                raise StudioPackageError(
+                    "Manifest tidak mendaftarkan berkas apa pun."
+                )
 
             declared: dict[str, dict] = {}
+            declared_folded: set[str] = set()
             for record in records:
                 entry = _mapping(record, "files")
                 path = _safe_path(entry.get("path"), "manifest NFT")
-                if path.casefold() in {item.casefold() for item in declared}:
-                    raise StudioPackageError("Manifest memuat path file ganda.")
+                key = path.casefold()
+                if key in declared_folded:
+                    raise StudioPackageError(
+                        "Manifest memuat path file ganda."
+                    )
+                declared_folded.add(key)
                 try:
                     size = int(entry.get("size"))
                 except (TypeError, ValueError) as exc:
-                    raise StudioPackageError(f"Ukuran file tidak valid: {path}") from exc
+                    raise StudioPackageError(
+                        f"Ukuran file tidak valid: {path}"
+                    ) from exc
                 checksum = str(entry.get("sha256") or "")
                 if size < 0 or not _SHA256_RE.fullmatch(checksum):
-                    raise StudioPackageError(f"Record integritas tidak valid: {path}")
-                declared[path] = {**entry, "size": size, "sha256": checksum}
+                    raise StudioPackageError(
+                        f"Record integritas tidak valid: {path}"
+                    )
+                declared[path] = {
+                    **entry,
+                    "size": size,
+                    "sha256": checksum,
+                }
 
             actual = set(by_path) - {MANIFEST_PATH, SEAL_PATH}
             if actual != set(declared):
@@ -279,31 +337,42 @@ def verify_studio_package(fileobj) -> VerifiedStudioPackage:
             for path, entry in declared.items():
                 content = archive.read(by_path[path])
                 if len(content) != entry["size"]:
-                    raise StudioPackageError(f"Ukuran berkas berubah: {path}")
+                    raise StudioPackageError(
+                        f"Ukuran berkas berubah: {path}"
+                    )
                 if sha256_of(content) != entry["sha256"]:
-                    raise StudioPackageError(f"Checksum berkas berubah: {path}")
-                if path.startswith("project/") and path.casefold().endswith(".batikpack"):
+                    raise StudioPackageError(
+                        f"Checksum berkas berubah: {path}"
+                    )
+                if (
+                    path.startswith("project/")
+                    and path.casefold().endswith(".batikpack")
+                ):
                     if embedded is not None:
                         raise StudioPackageError(
                             "Envelope pustaka hanya boleh memuat satu .batikpack."
                         )
-                    embedded = (path, entry, verify_asset_pack_bytes(content))
+                    embedded = (
+                        path,
+                        entry,
+                        verify_asset_pack_bytes(content),
+                    )
 
             identity = _mapping(manifest.get("identity"), "identity")
             creator = _mapping(identity.get("creator"), "identity.creator")
-            result = VerifiedStudioPackage(
-                package_id=str(manifest.get("package_id") or ""),
-                project_id=str(identity.get("project_id") or ""),
-                creator_user_id=str(creator.get("user_id") or ""),
-                title=str(identity.get("title") or ""),
-                preview_sha256=str(preview_entry.get("sha256") or ""),
-                preview_size=int(preview_entry.get("size") or 0),
-            )
+            base_fields = {
+                "package_id": str(manifest.get("package_id") or ""),
+                "project_id": str(identity.get("project_id") or ""),
+                "creator_user_id": str(creator.get("user_id") or ""),
+                "title": str(identity.get("title") or ""),
+                "preview_sha256": str(preview_entry.get("sha256") or ""),
+                "preview_size": int(preview_entry.get("size") or 0),
+            }
             if embedded is None:
-                return result
+                return VerifiedStudioPackage(**base_fields)
             path, entry, asset_pack = embedded
             return VerifiedStudioPackage(
-                **result.__dict__,
+                **base_fields,
                 asset_pack_path=path,
                 asset_pack_filename=PurePosixPath(path).name,
                 asset_pack_sha256=entry["sha256"],
@@ -314,7 +383,9 @@ def verify_studio_package(fileobj) -> VerifiedStudioPackage:
     except StudioPackageError:
         raise
     except zipfile.BadZipFile as exc:
-        raise StudioPackageError("Paket bukan arsip yang dapat dibaca.") from exc
+        raise StudioPackageError(
+            "Paket bukan arsip yang dapat dibaca."
+        ) from exc
     finally:
         try:
             fileobj.seek(0)
@@ -322,7 +393,10 @@ def verify_studio_package(fileobj) -> VerifiedStudioPackage:
             pass
 
 
-def read_embedded_asset_pack(fileobj, verified: VerifiedStudioPackage) -> bytes:
+def read_embedded_asset_pack(
+    fileobj,
+    verified: VerifiedStudioPackage,
+) -> bytes:
     """Ambil `.batikpack` dari envelope yang telah diverifikasi.
 
     Ukuran, checksum, dan struktur installable diperiksa ulang saat pembacaan agar
@@ -335,7 +409,9 @@ def read_embedded_asset_pack(fileobj, verified: VerifiedStudioPackage) -> bytes:
         with zipfile.ZipFile(fileobj) as archive:
             info = archive.getinfo(verified.asset_pack_path)
             if info.file_size != verified.asset_pack_size:
-                raise StudioPackageError("Ukuran pustaka tertanam berubah.")
+                raise StudioPackageError(
+                    "Ukuran pustaka tertanam berubah."
+                )
             content = archive.read(info)
         if sha256_of(content) != verified.asset_pack_sha256:
             raise StudioPackageError("Checksum pustaka tertanam berubah.")
@@ -344,9 +420,13 @@ def read_embedded_asset_pack(fileobj, verified: VerifiedStudioPackage) -> bytes:
             raise StudioPackageError("Identitas pustaka tertanam berubah.")
         return content
     except KeyError as exc:
-        raise StudioPackageError("Pustaka tertanam tidak ditemukan dalam envelope.") from exc
+        raise StudioPackageError(
+            "Pustaka tertanam tidak ditemukan dalam envelope."
+        ) from exc
     except zipfile.BadZipFile as exc:
-        raise StudioPackageError("Envelope tidak dapat dibaca kembali.") from exc
+        raise StudioPackageError(
+            "Envelope tidak dapat dibaca kembali."
+        ) from exc
     finally:
         try:
             fileobj.seek(0)
