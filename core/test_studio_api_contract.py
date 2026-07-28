@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import tempfile
 from datetime import timedelta
@@ -16,7 +17,11 @@ from rest_framework.test import APITestCase
 
 from payments.models import ListingFeeInvoice
 
-from .test_timezone_and_studio_origin import build_studio_package, jpeg_preview
+from .test_timezone_and_studio_origin import (
+    build_asset_pack,
+    build_studio_package,
+    jpeg_preview,
+)
 
 from .models import AuctionSettlement, NFTAsset, User
 
@@ -64,6 +69,7 @@ class StudioAPIContractTests(APITestCase):
         )
         self.creator_token = Token.objects.create(user=self.creator)
         self.buyer_token = Token.objects.create(user=self.buyer)
+        self.asset_pack_bytes = b""
 
     def auth(self, token):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
@@ -71,6 +77,8 @@ class StudioAPIContractTests(APITestCase):
     def upload_library(self, *, suffix=".batikcraftnft", include_package=True):
         self.auth(self.creator_token)
         preview = jpeg_preview()
+        self.asset_pack_bytes = build_asset_pack()
+        embedded_sha256 = hashlib.sha256(self.asset_pack_bytes).hexdigest()
         payload = {
             "title": "Pustaka Ornamen Sekar",
             "description": "Pustaka aset dari BatikCraft Studio",
@@ -85,7 +93,12 @@ class StudioAPIContractTests(APITestCase):
                     "source_type": "asset_library",
                     "library_name": "Pustaka Ornamen Sekar",
                     "library_type": "ornamen",
-                    "asset_count": 3,
+                    "asset_count": 1,
+                    "embedded_asset_path": (
+                        "project/library/pustaka-sekar.batikpack"
+                    ),
+                    "embedded_asset_filename": "pustaka-sekar.batikpack",
+                    "sha256": embedded_sha256,
                 }
             ),
             "image": SimpleUploadedFile(
@@ -95,7 +108,7 @@ class StudioAPIContractTests(APITestCase):
         if include_package:
             payload["package_file"] = SimpleUploadedFile(
                 f"sekar{suffix}",
-                build_studio_package(preview),
+                build_studio_package(preview, asset_pack=self.asset_pack_bytes),
                 content_type="application/zip",
             )
         return self.client.post(
@@ -109,7 +122,7 @@ class StudioAPIContractTests(APITestCase):
         response = self.client.get(reverse("api_capabilities"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["api_version"], "1.3")
+        self.assertEqual(response.data["api_version"], "1.4")
         self.assertEqual(response.data["minimum_studio_version"], "0.2.0")
         self.assertTrue(response.data["features"]["nft_auction_settlement"])
         self.assertTrue(response.data["features"]["nft_payment_verification"])
@@ -117,6 +130,10 @@ class StudioAPIContractTests(APITestCase):
         self.assertTrue(response.data["features"]["nft_owned_library"])
         self.assertTrue(response.data["features"]["nft_source_package_upload"])
         self.assertTrue(response.data["features"]["nft_source_package_download"])
+        self.assertTrue(response.data["features"]["asset_library_sealed_envelope"])
+        self.assertTrue(
+            response.data["features"]["asset_library_installable_download"]
+        )
         self.assertTrue(response.data["features"]["model_download"])
         self.assertTrue(response.data["features"]["nft_listing_fee"])
         self.assertTrue(response.data["features"]["creator_payout"])
@@ -129,9 +146,16 @@ class StudioAPIContractTests(APITestCase):
         created = self.upload_library()
         self.assertEqual(created.status_code, 201, created.data)
         nft = NFTAsset.objects.get(pk=created.data["id"])
-        package_record = nft.metadata["_studio_source_package"]
-        self.assertEqual(package_record["filename"], "sekar.batikcraftnft")
-        self.assertEqual(len(package_record["sha256"]), 64)
+        source_record = nft.metadata["_studio_source_package"]
+        download_record = nft.metadata["_studio_download_package"]
+        self.assertEqual(source_record["filename"], "sekar.batikcraftnft")
+        self.assertEqual(source_record["kind"], "sealed_listing_envelope")
+        self.assertEqual(download_record["filename"], "pustaka-sekar.batikpack")
+        self.assertEqual(download_record["kind"], "installable_asset_pack")
+        self.assertEqual(
+            download_record["sha256"],
+            hashlib.sha256(self.asset_pack_bytes).hexdigest(),
+        )
 
         # Publish ditolak selama fee bidding belum lunas.
         unpaid = self.client.post(
@@ -140,6 +164,7 @@ class StudioAPIContractTests(APITestCase):
             format="json",
         )
         self.assertEqual(unpaid.status_code, 402, unpaid.data)
+        self.assertEqual(unpaid.data["listing_fee"]["nft_id"], nft.pk)
         self.assertEqual(unpaid.data["listing_fee"]["fee_percent"], "5.00")
         self.assertEqual(unpaid.data["listing_fee"]["vat_percent"], "11.00")
         self.assertFalse(unpaid.data["listing_fee"]["refundable"])
@@ -156,15 +181,21 @@ class StudioAPIContractTests(APITestCase):
             reverse("api-nft-package", args=[nft.pk])
         )
         self.assertEqual(owner_download.status_code, 200)
-        self.assertIn("sekar.batikcraftnft", owner_download["Content-Disposition"])
+        self.assertIn("pustaka-sekar.batikpack", owner_download["Content-Disposition"])
         self.assertEqual(
             owner_download["X-BatikCraft-Package-SHA256"],
-            package_record["sha256"],
+            download_record["sha256"],
         )
+        self.assertEqual(
+            owner_download["X-BatikCraft-Package-Kind"],
+            "installable_asset_pack",
+        )
+        self.assertEqual(b"".join(owner_download.streaming_content), self.asset_pack_bytes)
 
     def test_winning_bidder_downloads_package_only_after_paid_mint(self):
         created = self.upload_library()
         self.assertEqual(created.status_code, 201, created.data)
+        expected_pack = self.asset_pack_bytes
         nft = NFTAsset.objects.get(pk=created.data["id"])
         settle_listing_fee(nft)
         self.client.post(
@@ -222,6 +253,8 @@ class StudioAPIContractTests(APITestCase):
             reverse("api-nft-package", args=[nft.pk])
         )
         self.assertEqual(after_paid_mint.status_code, 200)
+        self.assertIn(".batikpack", after_paid_mint["Content-Disposition"])
+        self.assertEqual(b"".join(after_paid_mint.streaming_content), expected_pack)
 
     def test_upload_without_sealed_package_is_rejected(self):
         """Gambar tanpa paket bersegel ditolak sejak pembuatan."""
@@ -231,7 +264,7 @@ class StudioAPIContractTests(APITestCase):
         self.assertIn("package_file", rejected.data)
 
     def test_batikpack_cannot_vouch_for_an_image(self):
-        """.batikpack tidak memuat preview bersegel, jadi tidak bisa jadi bukti."""
+        """`.batikpack` harus berada di dalam envelope yang mengikat preview."""
         rejected = self.upload_library(suffix=".batikpack")
 
         self.assertEqual(rejected.status_code, 400, rejected.data)
@@ -272,3 +305,4 @@ class StudioAPIContractTests(APITestCase):
             nft.metadata["_studio_source_package"]["filename"],
             "motif.batikcraftnft",
         )
+        self.assertNotIn("_studio_download_package", nft.metadata)

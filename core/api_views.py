@@ -6,6 +6,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from django.conf import settings
+from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.db import transaction
 from django.db.models import F, Q
@@ -30,6 +31,7 @@ from payments.services import (
 
 from .studio_package import (
     StudioPackageError,
+    read_embedded_asset_pack,
     sha256_of_upload,
     verify_studio_package,
 )
@@ -50,8 +52,9 @@ from .serializers import (
 )
 
 _PACKAGE_METADATA_KEY = "_studio_source_package"
+_DOWNLOAD_PACKAGE_METADATA_KEY = "_studio_download_package"
 _STUDIO_ORIGIN_METADATA_KEY = "_studio_origin"
-_ALLOWED_NFT_PACKAGE_SUFFIXES = {".batikcraftnft", ".batikpack"}
+_ALLOWED_NFT_PACKAGE_SUFFIXES = {".batikcraftnft"}
 _DEFAULT_MAX_PACKAGE_SIZE = 512 * 1024 * 1024
 
 
@@ -70,6 +73,7 @@ def _fee_checkout_url(request, nft) -> str:
 def _listing_fee_payload(request, fee_invoice) -> dict:
     """Bentuk respons fee yang dikonsumsi BatikCraft Studio."""
     return {
+        "nft_id": fee_invoice.nft_id,
         "status": fee_invoice.status,
         "invoice_number": fee_invoice.invoice_number,
         "currency": "IDR",
@@ -91,12 +95,17 @@ def _studio_origin_required() -> bool:
     return bool(getattr(settings, "BATIKCRAFT_REQUIRE_STUDIO_PACKAGE", True))
 
 
-def _verify_studio_origin(upload, image, serializer, instance=None):
-    """Pastikan gambar NFT benar-benar preview dari paket Studio yang utuh.
+def _verified_source_type(serializer, instance=None) -> tuple[str, dict]:
+    metadata = serializer.validated_data.get(
+        "metadata",
+        getattr(instance, "metadata", None) or {},
+    )
+    metadata = metadata if isinstance(metadata, dict) else {}
+    return str(metadata.get("source_type") or ""), metadata
 
-    Mengembalikan hasil verifikasi bila paket disertakan, atau None bila
-    permintaan ini tidak menyentuh gambar maupun paket.
-    """
+
+def _verify_studio_origin(upload, image, serializer, instance=None):
+    """Pastikan gambar NFT dan pustaka tertanam berasal dari envelope Studio."""
     if not _studio_origin_required():
         return None
 
@@ -132,13 +141,11 @@ def _verify_studio_origin(upload, image, serializer, instance=None):
         )
 
     if Path(upload.name).suffix.casefold() != ".batikcraftnft":
-        # .batikpack (pustaka aset) tidak memuat preview bersegel sehingga tidak
-        # dapat dipakai sebagai bukti asal gambar.
         raise serializers.ValidationError(
             {
                 "package_file": (
-                    "Gambar NFT harus disertai paket .batikcraftnft, bukan "
-                    ".batikpack."
+                    "Unggah envelope .batikcraftnft bersegel. Pustaka .batikpack "
+                    "harus berada di dalam envelope tersebut."
                 )
             }
         )
@@ -164,13 +171,49 @@ def _verify_studio_origin(upload, image, serializer, instance=None):
                 )
             }
         )
+
+    source_type, metadata = _verified_source_type(serializer, instance)
+    if source_type == "asset_library":
+        if not verified.asset_pack_path:
+            raise serializers.ValidationError(
+                {
+                    "package_file": (
+                        "Listing pustaka wajib memuat tepat satu .batikpack "
+                        "installable di dalam envelope bersegel."
+                    )
+                }
+            )
+        declared_path = str(metadata.get("embedded_asset_path") or "")
+        declared_filename = str(metadata.get("embedded_asset_filename") or "")
+        declared_sha256 = str(metadata.get("sha256") or "")
+        mismatches = {}
+        if declared_path and declared_path != verified.asset_pack_path:
+            mismatches["embedded_asset_path"] = "Path pustaka tidak cocok dengan envelope."
+        if declared_filename and declared_filename != verified.asset_pack_filename:
+            mismatches["embedded_asset_filename"] = (
+                "Nama pustaka tidak cocok dengan envelope."
+            )
+        if declared_sha256 and declared_sha256 != verified.asset_pack_sha256:
+            mismatches["sha256"] = "Checksum pustaka tidak cocok dengan envelope."
+        if mismatches:
+            raise serializers.ValidationError({"metadata": mismatches})
+    elif verified.asset_pack_path:
+        raise serializers.ValidationError(
+            {
+                "metadata": {
+                    "source_type": (
+                        "Envelope memuat .batikpack tetapi metadata bukan asset_library."
+                    )
+                }
+            }
+        )
     return verified
 
 
 def _record_studio_origin(nft: NFTAsset, verified) -> None:
     """Simpan jejak paket asal supaya dapat diaudit administrator."""
     metadata = dict(nft.metadata or {})
-    metadata[_STUDIO_ORIGIN_METADATA_KEY] = {
+    origin = {
         "package_id": verified.package_id,
         "project_id": verified.project_id,
         "creator_user_id": verified.creator_user_id,
@@ -180,6 +223,16 @@ def _record_studio_origin(nft: NFTAsset, verified) -> None:
         # Segel paket hanya checksum; ini bukan bukti tanda tangan kriptografis.
         "signature_verified": False,
     }
+    if verified.asset_pack_path:
+        origin["asset_pack"] = {
+            "path": verified.asset_pack_path,
+            "filename": verified.asset_pack_filename,
+            "sha256": verified.asset_pack_sha256,
+            "size": verified.asset_pack_size,
+            "pack_id": verified.asset_pack_id,
+            "name": verified.asset_pack_name,
+        }
+    metadata[_STUDIO_ORIGIN_METADATA_KEY] = origin
     nft.metadata = metadata
     nft.save(update_fields=["metadata", "updated_at"])
 
@@ -195,28 +248,38 @@ def _package_record(nft: NFTAsset) -> dict:
     return value if isinstance(value, dict) else {}
 
 
+def _download_package_record(nft: NFTAsset) -> dict:
+    value = (nft.metadata or {}).get(_DOWNLOAD_PACKAGE_METADATA_KEY, {})
+    if isinstance(value, dict) and value.get("storage_name"):
+        return value
+    return _package_record(nft)
+
+
 def _package_storage_name(nft: NFTAsset) -> str:
     return str(_package_record(nft).get("storage_name") or "").strip()
 
 
+def _download_package_storage_name(nft: NFTAsset) -> str:
+    return str(_download_package_record(nft).get("storage_name") or "").strip()
+
+
 def _delete_stored_package(nft: NFTAsset) -> None:
-    storage_name = _package_storage_name(nft)
-    if storage_name and default_storage.exists(storage_name):
-        default_storage.delete(storage_name)
+    names = {
+        _package_storage_name(nft),
+        _download_package_storage_name(nft),
+    }
+    for storage_name in names:
+        if storage_name and default_storage.exists(storage_name):
+            default_storage.delete(storage_name)
 
 
-def _store_uploaded_package(nft: NFTAsset, upload) -> None:
-    """Persist a Studio source package and record integrity metadata on the NFT."""
+def _store_uploaded_package(nft: NFTAsset, upload, *, verified=None) -> None:
+    """Simpan envelope audit dan `.batikpack` installable secara terpisah."""
 
     suffix = Path(upload.name).suffix.casefold()
     if suffix not in _ALLOWED_NFT_PACKAGE_SUFFIXES:
         raise serializers.ValidationError(
-            {
-                "package_file": (
-                    "Paket sumber harus memakai ekstensi .batikcraftnft atau "
-                    ".batikpack."
-                )
-            }
+            {"package_file": "Paket sumber wajib berupa envelope .batikcraftnft."}
         )
     max_size = int(
         getattr(
@@ -235,36 +298,94 @@ def _store_uploaded_package(nft: NFTAsset, upload) -> None:
             }
         )
 
-    previous = _package_storage_name(nft)
-    storage_name = default_storage.save(
-        f"nft-packages/{nft.owner_id}/{nft.pk}/{uuid.uuid4().hex}{suffix}",
-        upload,
-    )
-    digest = hashlib.sha256()
-    with default_storage.open(storage_name, "rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
+    source_type = str((nft.metadata or {}).get("source_type") or "")
+    embedded_content: bytes | None = None
+    if source_type == "asset_library":
+        if verified is None or not verified.asset_pack_path:
+            raise serializers.ValidationError(
+                {"package_file": "Envelope pustaka tidak memuat .batikpack terverifikasi."}
+            )
+        try:
+            embedded_content = read_embedded_asset_pack(upload, verified)
+        except StudioPackageError as exc:
+            raise serializers.ValidationError({"package_file": str(exc)}) from exc
 
-    metadata = dict(nft.metadata or {})
-    metadata[_PACKAGE_METADATA_KEY] = {
-        "storage_name": storage_name,
-        "filename": Path(upload.name).name,
-        "content_type": str(getattr(upload, "content_type", "") or ""),
-        "size": int(upload.size),
-        "sha256": digest.hexdigest(),
-        "uploaded_at": timezone.now().isoformat(),
+    previous_source = _package_storage_name(nft)
+    previous_download = _download_package_storage_name(nft)
+    source_storage_name = ""
+    download_storage_name = ""
+    created_names: list[str] = []
+    try:
+        upload.seek(0)
+        source_storage_name = default_storage.save(
+            f"nft-packages/{nft.owner_id}/{nft.pk}/{uuid.uuid4().hex}{suffix}",
+            upload,
+        )
+        created_names.append(source_storage_name)
+        digest = hashlib.sha256()
+        with default_storage.open(source_storage_name, "rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+
+        metadata = dict(nft.metadata or {})
+        metadata[_PACKAGE_METADATA_KEY] = {
+            "storage_name": source_storage_name,
+            "filename": Path(upload.name).name,
+            "content_type": str(getattr(upload, "content_type", "") or ""),
+            "size": int(upload.size),
+            "sha256": digest.hexdigest(),
+            "uploaded_at": timezone.now().isoformat(),
+            "kind": "sealed_listing_envelope",
+        }
+
+        if embedded_content is not None:
+            download_storage_name = default_storage.save(
+                (
+                    f"asset-library-packages/{nft.owner_id}/{nft.pk}/"
+                    f"{uuid.uuid4().hex}.batikpack"
+                ),
+                ContentFile(
+                    embedded_content,
+                    name=verified.asset_pack_filename or "pustaka.batikpack",
+                ),
+            )
+            created_names.append(download_storage_name)
+            metadata[_DOWNLOAD_PACKAGE_METADATA_KEY] = {
+                "storage_name": download_storage_name,
+                "filename": verified.asset_pack_filename,
+                "content_type": "application/zip",
+                "size": verified.asset_pack_size,
+                "sha256": verified.asset_pack_sha256,
+                "pack_id": verified.asset_pack_id,
+                "name": verified.asset_pack_name,
+                "extracted_from": source_storage_name,
+                "kind": "installable_asset_pack",
+            }
+        else:
+            metadata.pop(_DOWNLOAD_PACKAGE_METADATA_KEY, None)
+
+        nft.metadata = metadata
+        nft.save(update_fields=["metadata", "updated_at"])
+    except Exception:
+        for storage_name in created_names:
+            if storage_name and default_storage.exists(storage_name):
+                default_storage.delete(storage_name)
+        raise
+
+    old_names = {previous_source, previous_download} - {
+        source_storage_name,
+        download_storage_name,
+        "",
     }
-    nft.metadata = metadata
-    nft.save(update_fields=["metadata", "updated_at"])
-
-    if previous and previous != storage_name and default_storage.exists(previous):
-        default_storage.delete(previous)
+    for storage_name in old_names:
+        if default_storage.exists(storage_name):
+            default_storage.delete(storage_name)
 
 
 def _can_download_package(nft: NFTAsset, user) -> bool:
     """Only the creator or the paid, minted owner may download source files."""
 
-    if not user or not user.is_authenticated or not _package_storage_name(nft):
+    if not user or not user.is_authenticated or not _download_package_storage_name(nft):
         return False
     if user.is_superuser or nft.owner_id == user.id:
         return True
@@ -316,7 +437,7 @@ class StudioCapabilitiesView(APIView):
     def get(self, request):
         return Response(
             {
-                "api_version": "1.3",
+                "api_version": "1.4",
                 "minimum_studio_version": "0.2.0",
                 "authentication": "token",
                 "pagination": "page-number",
@@ -342,6 +463,8 @@ class StudioCapabilitiesView(APIView):
                     "nft_source_package_download": True,
                     "nft_listing_fee": True,
                     "nft_listing_fee_vat": True,
+                    "asset_library_sealed_envelope": True,
+                    "asset_library_installable_download": True,
                     "creator_payout": True,
                     "model_marketplace": True,
                     "model_purchase": True,
@@ -412,8 +535,9 @@ class NFTAssetViewSet(viewsets.ModelViewSet):
             _record_studio_origin(nft, verified)
         if upload is not None:
             try:
-                _store_uploaded_package(nft, upload)
+                _store_uploaded_package(nft, upload, verified=verified)
             except Exception:
+                _delete_stored_package(nft)
                 nft.delete()
                 raise
 
@@ -427,7 +551,7 @@ class NFTAssetViewSet(viewsets.ModelViewSet):
         if verified is not None:
             _record_studio_origin(nft, verified)
         if upload is not None:
-            _store_uploaded_package(nft, upload)
+            _store_uploaded_package(nft, upload, verified=verified)
 
     def perform_destroy(self, instance):
         _delete_stored_package(instance)
@@ -465,11 +589,12 @@ class NFTAssetViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         source_type = (nft.metadata or {}).get("source_type")
-        if source_type == "asset_library" and not _package_storage_name(nft):
+        if source_type == "asset_library" and not _download_package_storage_name(nft):
             return Response(
                 {
                     "package_file": (
-                        "Pustaka aset wajib menyertakan file .batikpack."
+                        "Pustaka aset wajib menyertakan .batikpack terverifikasi "
+                        "di dalam envelope Studio."
                     )
                 },
                 status=status.HTTP_400_BAD_REQUEST,
@@ -509,6 +634,7 @@ class NFTAssetViewSet(viewsets.ModelViewSet):
             quote = listing_fee_quote(nft)
             return Response(
                 {
+                    "nft_id": nft.pk,
                     "status": "not_issued",
                     "currency": "IDR",
                     "base_amount": str(quote["base_amount"]),
@@ -568,7 +694,7 @@ class NFTAssetViewSet(viewsets.ModelViewSet):
                 },
                 status=status.HTTP_403_FORBIDDEN,
             )
-        record = _package_record(nft)
+        record = _download_package_record(nft)
         storage_name = str(record.get("storage_name") or "")
         if not storage_name or not default_storage.exists(storage_name):
             return Response(
@@ -587,6 +713,7 @@ class NFTAssetViewSet(viewsets.ModelViewSet):
         response["X-BatikCraft-Package-SHA256"] = str(
             record.get("sha256") or ""
         )
+        response["X-BatikCraft-Package-Kind"] = str(record.get("kind") or "source")
         return response
 
 
