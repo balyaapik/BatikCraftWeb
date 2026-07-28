@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Q
-from django.http import HttpResponseRedirect, JsonResponse
+from django.http import Http404, HttpResponseRedirect, JsonResponse
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
@@ -16,14 +16,13 @@ from django.views.decorators.http import require_GET, require_POST
 
 from core.models import AuctionSettlement, NFTAsset
 
+from . import views as legacy_views
 from .models import ListingFeeInvoice, PaymentGatewayAttempt
 from .services import apply_verified_xendit_status, issue_listing_fee_invoice
 from .views import _authorized_settlement, _resolve_fee_invoice, _validate_verified_invoice
 from .xendit import (
     XenditError,
-    create_invoice,
     environment_name,
-    get_invoice,
     is_enabled,
     verified_event_key,
 )
@@ -85,8 +84,6 @@ def start_xendit_checkout(request, public_id):
     with transaction.atomic():
         settlement = _authorized_settlement(request, public_id, lock=True)
         if settlement.buyer_id != request.user.id:
-            from django.http import Http404
-
             raise Http404("Invoice tidak ditemukan.")
         if settlement.status == AuctionSettlement.Status.MINTED:
             messages.info(request, "Invoice ini sudah lunas.")
@@ -125,7 +122,7 @@ def start_xendit_checkout(request, public_id):
         reverse("settlement_detail", args=[settlement.public_id])
     )
     try:
-        response = create_invoice(attempt, finish_url)
+        response = legacy_views.create_invoice(attempt, finish_url)
     except XenditError as exc:
         PaymentGatewayAttempt.objects.filter(pk=attempt.pk).update(
             status=PaymentGatewayAttempt.Status.FAILED,
@@ -194,7 +191,7 @@ def start_listing_fee_checkout(request, pk):
 
     finish_url = request.build_absolute_uri(reverse("creator_dashboard"))
     try:
-        response = create_invoice(attempt, finish_url)
+        response = legacy_views.create_invoice(attempt, finish_url)
     except XenditError as exc:
         PaymentGatewayAttempt.objects.filter(pk=attempt.pk).update(
             status=PaymentGatewayAttempt.Status.FAILED,
@@ -248,7 +245,7 @@ def sync_xendit_status(request, public_id):
         messages.error(request, "Belum ada invoice Xendit yang dapat disinkronkan.")
         return redirect("settlement_detail", public_id=public_id)
     try:
-        verified = get_invoice(attempt.invoice_id)
+        verified = legacy_views.get_invoice(attempt.invoice_id)
         _validate_verified_invoice(attempt, verified)
         apply_verified_xendit_status(
             attempt.id,
