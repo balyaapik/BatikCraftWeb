@@ -2,7 +2,7 @@ from django.contrib.auth import views as django_auth_views
 from django.urls import include, path
 from django.views.generic import TemplateView
 
-from . import auth_views, public_views, views
+from . import auth_views, creator_auction_views, public_views, views
 
 urlpatterns = [
     path("", public_views.home, name="home"),
@@ -18,7 +18,7 @@ urlpatterns = [
     path("market/<int:pk>/bid/", views.place_bid, name="place_bid"),
     path(
         "market/<int:pk>/invoice/",
-        views.create_auction_invoice,
+        creator_auction_views.create_auction_invoice,
         name="create_auction_invoice",
     ),
     path("library/", public_views.library_market, name="library_market"),
@@ -53,43 +53,58 @@ urlpatterns = [
     path("dashboard/profile/", views.profile_edit, name="profile_edit"),
     path("dashboard/nfts/new/", views.nft_create, name="nft_create"),
     path(
+        "dashboard/nfts/<int:pk>/edit/",
+        creator_auction_views.nft_edit,
+        name="nft_edit",
+    ),
+    path(
         "dashboard/nfts/<int:pk>/publish/",
-        views.nft_publish,
+        creator_auction_views.nft_publish,
         name="nft_publish",
     ),
     path(
         "dashboard/settlements/<uuid:public_id>/",
-        views.settlement_detail,
+        creator_auction_views.settlement_detail,
         name="settlement_detail",
     ),
     path(
         "dashboard/settlements/<uuid:public_id>/accept/",
-        views.accept_auction_invoice,
+        creator_auction_views.accept_auction_invoice,
         name="accept_auction_invoice",
     ),
     path(
         "dashboard/settlements/<uuid:public_id>/decline/",
-        views.decline_auction_invoice,
+        creator_auction_views.decline_auction_invoice,
         name="decline_auction_invoice",
     ),
     path(
         "dashboard/settlements/<uuid:public_id>/payment/",
-        views.submit_auction_payment,
+        creator_auction_views.submit_auction_payment,
         name="submit_auction_payment",
     ),
     path(
         "dashboard/settlements/<uuid:public_id>/verify/",
-        views.verify_auction_payment,
+        creator_auction_views.verify_auction_payment,
         name="verify_auction_payment",
     ),
     path(
         "dashboard/settlements/<uuid:public_id>/reject-payment/",
-        views.reject_auction_payment,
+        creator_auction_views.reject_auction_payment,
         name="reject_auction_payment",
     ),
     path(
+        "dashboard/settlements/<uuid:public_id>/next-bidder/",
+        creator_auction_views.offer_next_bidder,
+        name="offer_next_bidder",
+    ),
+    path(
+        "dashboard/settlements/<uuid:public_id>/reopen/",
+        creator_auction_views.reopen_auction,
+        name="reopen_auction",
+    ),
+    path(
         "dashboard/settlements/<uuid:public_id>/proof/",
-        views.settlement_payment_proof,
+        creator_auction_views.settlement_payment_proof,
         name="settlement_payment_proof",
     ),
     path("dashboard/models/new/", views.model_create, name="model_create"),
