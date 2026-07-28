@@ -5,7 +5,7 @@
 <section class="detail-layout section-pad">
   <div class="detail-image">{% if nft.display_image %}<img src="{{ nft.display_image }}" alt="{{ nft.title }}">{% else %}<div class="image-placeholder">BatikCraft NFT</div>{% endif %}</div>
   <div class="detail-copy">
-    <span class="eyebrow">{% if nft.metadata.source_type == 'library_asset' %}<i class="fa-solid fa-puzzle-piece" aria-hidden="true"></i> {% t "detail.library_asset" %} · {% endif %}{{ nft.get_status_display }}</span>
+    <span class="eyebrow">{% if nft.metadata.source_type == 'asset_library' %}<i class="fa-solid fa-puzzle-piece" aria-hidden="true"></i> {% t "detail.library_asset" %} · {% endif %}{{ nft.get_status_display }}</span>
     <h1>{{ nft.title }}</h1>
     <p class="creator-line">{% t "detail.created_by" %} <strong>{{ nft.owner.public_name }}</strong></p>
     {% if nft.current_owner %}<p class="creator-line">Kolektor saat ini <strong>{{ nft.current_owner.public_name }}</strong></p>{% endif %}
@@ -14,6 +14,8 @@
       <span>{% t "detail.current_price" %}</span>
       <strong>Rp{{ nft.current_price|floatformat:0 }}</strong>
       <small>{{ nft.bids.count }} {% t "detail.saved_bids" %}</small>
+      {% if nft.auction_ends_at %}<small>Lelang berakhir {{ nft.auction_ends_at|date:'d M Y, H:i' }}</small>{% endif %}
+      {% if nft.reserve_price %}<small>Reserve price Rp{{ nft.reserve_price|floatformat:0 }}</small>{% endif %}
       {% if user.is_authenticated and user.role == 'buyer' and nft.status == 'listed' %}
         <form method="post" action="{% url 'place_bid' nft.pk %}">{% csrf_token %}{{ bid_form.amount }}<button class="btn btn-primary" {% if not nft.is_auction_open %}disabled{% endif %}>{% t "detail.place_bid" %}</button></form>
       {% elif not user.is_authenticated and nft.status == 'listed' %}
@@ -21,9 +23,13 @@
       {% endif %}
     </div>
 
+    {% if user.is_authenticated and user.id == nft.owner_id and nft.status == 'draft' %}
+      <a class="btn btn-ghost" href="{% url 'nft_edit' nft.pk %}">Edit metadata dan aturan lelang</a>
+    {% endif %}
+
     {% if user.is_authenticated and user.id == nft.owner_id and nft.auction_has_ended %}
       {% if settlement %}
-        <a class="btn btn-primary" href="{% url 'settlement_detail' settlement.public_id %}">Buka invoice {{ settlement.invoice_number }}</a>
+        <a class="btn btn-primary" href="{% url 'settlement_detail' settlement.public_id %}">Buka penyelesaian {{ settlement.invoice_number }}</a>
       {% elif nft.highest_bid and nft.reserve_met %}
         <div class="bid-panel">
           <strong>Tagih pemenang bid</strong>
