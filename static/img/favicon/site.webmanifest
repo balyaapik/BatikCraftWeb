@@ -1,0 +1,21 @@
+{
+  "name": "BatikCraft",
+  "short_name": "BatikCraft",
+  "description": "Heritage digital studio and marketplace for Indonesian batik motifs.",
+  "icons": [
+    {
+      "src": "/static/img/favicon/favicon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/img/favicon/favicon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#29463d",
+  "background_color": "#fbf8f3",
+  "display": "standalone",
+  "start_url": "/"
+}
