@@ -1,5 +1,6 @@
 from django.urls import path
 
+from payments import admin_views as payment_admin_views
 from storage_config import views as storage_views
 
 from . import admin_views
@@ -21,5 +22,10 @@ urlpatterns = [
     path("nfts/<int:pk>/delete/", admin_views.nft_delete, name="nft_delete"),
     path("bids/", admin_views.bid_list, name="bid_list"),
     path("bids/<int:pk>/delete/", admin_views.bid_delete, name="bid_delete"),
+    path(
+        "payments/",
+        payment_admin_views.payment_gateway_settings,
+        name="payment_gateway_settings",
+    ),
     path("storage/", storage_views.storage_settings, name="storage_settings"),
 ]

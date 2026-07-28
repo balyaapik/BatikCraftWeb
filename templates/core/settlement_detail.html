@@ -36,11 +36,32 @@
   {% endif %}
 
   {% if settlement.status == 'accepted' and user.id == settlement.buyer_id %}
+  {% with gateway_attempt=settlement.gateway_attempts.first %}
   <div class="settlement-grid">
     <article class="settlement-card">
       <h2>Pembayaran otomatis</h2>
-      <p>Bayar melalui checkout Xendit. Status lunas akan diverifikasi kembali ke API Xendit sebelum NFT diterbitkan.</p>
-      <form method="post" action="{% url 'payments:start_checkout' settlement.public_id %}">{% csrf_token %}<button class="btn btn-primary" type="submit">Bayar melalui Xendit</button></form>
+      {% if xendit_enabled %}
+        <p>Bayar melalui checkout Xendit QRIS. Setelah kembali ke BatikCraft, tekan cek status jika pembayaran belum otomatis terverifikasi.</p>
+        {% if gateway_attempt %}
+          <dl>
+            <div><dt>Status checkout</dt><dd>{{ gateway_attempt.get_status_display }}</dd></div>
+            {% if gateway_attempt.gateway_status %}<div><dt>Status Xendit</dt><dd>{{ gateway_attempt.gateway_status }}</dd></div>{% endif %}
+            <div><dt>Mode</dt><dd>{{ gateway_attempt.get_environment_display }}</dd></div>
+          </dl>
+        {% endif %}
+        <div class="settlement-actions">
+          {% if gateway_attempt.invoice_url and gateway_attempt.is_active %}
+            <a class="btn btn-primary" href="{{ gateway_attempt.invoice_url }}" rel="noopener">Lanjutkan checkout Xendit</a>
+          {% else %}
+            <form method="post" action="{% url 'payments:start_checkout' settlement.public_id %}">{% csrf_token %}<button class="btn btn-primary" type="submit">Bayar melalui Xendit</button></form>
+          {% endif %}
+          {% if gateway_attempt.invoice_id %}
+            <form method="post" action="{% url 'payments:sync_status' settlement.public_id %}">{% csrf_token %}<button class="btn btn-ghost" type="submit">Cek status pembayaran</button></form>
+          {% endif %}
+        </div>
+      {% else %}
+        <div class="settlement-alert warning"><strong>Checkout otomatis belum aktif.</strong> Administrator perlu mengisi konfigurasi Xendit. Buyer tetap dapat memakai pembayaran manual di samping.</div>
+      {% endif %}
     </article>
     <article class="settlement-card">
       <h2>Konfirmasi pembayaran manual</h2>
@@ -52,6 +73,7 @@
       </form>
     </article>
   </div>
+  {% endwith %}
   {% endif %}
 
   {% if settlement.payment_submitted_at %}<article class="settlement-card"><h2>Data pembayaran</h2><dl>
