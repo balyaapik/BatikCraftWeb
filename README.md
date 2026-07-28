@@ -1,5 +1,7 @@
 # BatikCraftWeb
 
+<img width="512" height="512" alt="ChatGPT Image Jul 28, 2026, 11_00_23 AM" src="https://github.com/user-attachments/assets/4e34c038-8677-40b2-a4fc-c13ef962bf1f" />
+
 The Django web platform for the BatikCraft ecosystem: landing pages, blog, creator and
 buyer dashboards, an NFT marketplace with live auctions, a model and asset library
 marketplace, a REST API for BatikCraft Studio, and an administrator dashboard.
