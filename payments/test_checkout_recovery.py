@@ -62,7 +62,7 @@ class CheckoutRecoveryTests(TestCase):
         )
         self.client.force_login(self.buyer)
 
-    @patch("payments.checkout_views.create_invoice")
+    @patch("payments.views.create_invoice")
     def test_stale_created_attempt_is_retired_and_checkout_can_retry(
         self, create_invoice
     ):
@@ -119,7 +119,7 @@ class CheckoutRecoveryTests(TestCase):
             "https://checkout.xendit.co/web/invoice/pending",
         )
 
-    @patch("payments.checkout_views.get_invoice")
+    @patch("payments.views.get_invoice")
     def test_sync_uses_latest_attempt_that_has_an_invoice_id(self, get_invoice):
         verifiable = PaymentGatewayAttempt.objects.create(
             settlement=self.settlement,
