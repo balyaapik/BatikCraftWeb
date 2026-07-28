@@ -1,0 +1,77 @@
+{% extends "admin_dashboard/base.html" %}
+{% load static %}
+
+{% block admin_title %}Pembayaran Xendit{% endblock %}
+{% block admin_heading %}Pembayaran{% endblock %}
+
+{% block extra_head %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'css/admin-storage.css' %}">
+{% endblock %}
+
+{% block admin_content %}
+<div class="admin-page-head compact">
+  <div>
+    <span class="admin-eyebrow">System</span>
+    <h1>Checkout Xendit</h1>
+    <p>Aktifkan checkout QRIS buyer dan fee listing creator tanpa mengubah file konfigurasi VPS.</p>
+  </div>
+</div>
+
+<div class="storage-status-grid">
+  <article class="storage-status-card">
+    <span>Status gateway</span>
+    <strong>{% if gateway_enabled %}Aktif{% else %}Belum aktif{% endif %}</strong>
+    <small>Sumber konfigurasi: {% if using_database %}database admin{% else %}environment server{% endif %}.</small>
+  </article>
+  <article class="storage-status-card">
+    <span>Mode transaksi</span>
+    <strong>{{ gateway_environment|title }}</strong>
+    <small>Gunakan sandbox untuk pengujian dan production hanya dengan live API key.</small>
+  </article>
+  <article class="storage-status-card">
+    <span>Kelengkapan secret</span>
+    <strong>{% if api_key_present and webhook_token_present %}Lengkap{% else %}Belum lengkap{% endif %}</strong>
+    <small>API key: {% if api_key_present %}tersimpan{% else %}kosong{% endif %} · webhook token: {% if webhook_token_present %}tersimpan{% else %}kosong{% endif %}.</small>
+  </article>
+</div>
+
+<div class="storage-layout">
+  <form class="admin-editor-card storage-form" method="post">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="admin-form-errors">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="admin-form-grid">
+      {% for field in form %}
+      <div class="admin-field {% if field.name == 'api_key' or field.name == 'webhook_token' %}admin-field-wide{% endif %}">
+        <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span>*</span>{% endif %}</label>
+        {{ field }}
+        {% if field.help_text %}<small>{{ field.help_text|safe }}</small>{% endif %}
+        {% if field.errors %}<div class="admin-field-error">{{ field.errors|striptags }}</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    <div class="admin-form-actions storage-actions">
+      {% if using_database %}
+      <button class="admin-btn admin-btn-secondary" type="submit" name="action" value="reset_environment">Gunakan environment server</button>
+      {% endif %}
+      <button class="admin-btn admin-btn-primary" type="submit" name="action" value="save">Simpan konfigurasi</button>
+    </div>
+  </form>
+
+  <aside class="storage-guide-card">
+    <h2>Webhook yang harus dipasang</h2>
+    <p>Masukkan URL berikut pada Xendit Dashboard untuk webhook Invoice / Payment Link:</p>
+    <pre><code>{{ webhook_url }}</code></pre>
+    <ol>
+      <li>Gunakan secret API development saat mode sandbox.</li>
+      <li>Salin verification token Xendit ke kolom webhook token.</li>
+      <li>Pastikan domain memakai HTTPS dan dapat diakses publik.</li>
+      <li>Uji checkout dengan buyer setelah invoice lelang disetujui.</li>
+    </ol>
+    <div class="storage-warning">
+      <strong>Perhatian</strong>
+      <p>Secret hanya digunakan pada sisi server dan tidak pernah ditampilkan pada halaman buyer. Mengosongkan kolom secret mempertahankan nilai yang sudah tersimpan.</p>
+    </div>
+  </aside>
+</div>
+{% endblock %}
