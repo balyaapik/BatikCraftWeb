@@ -19,7 +19,11 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
 from .models import MarketplaceSetting, NFTAsset, User
-from .studio_package import StudioPackageError, verify_studio_package
+from .studio_package import (
+    StudioPackageError,
+    read_embedded_asset_pack,
+    verify_studio_package,
+)
 
 
 def _sha256(data: bytes) -> str:
@@ -32,6 +36,38 @@ def jpeg_preview() -> bytes:
     return stream.getvalue()
 
 
+def build_asset_pack(*, malformed: bool = False) -> bytes:
+    """Susun `.batikpack` kecil dengan struktur yang dibuat BatikCraft Studio."""
+    asset_path = "assets/sekar-1.batikasset"
+    asset_content = b"batikasset-test-payload"
+    manifest = {
+        "format": "format-salah" if malformed else "batikcraft-asset-pack",
+        "schema_version": "1.0",
+        "pack": {
+            "id": "pustaka-sekar",
+            "name": "Pustaka Sekar",
+            "version": "1.0.0",
+            "author": "Creator",
+            "description": "Ornamen sekar",
+        },
+        "assets": [
+            {
+                "id": "sekar-1",
+                "name": "Sekar Satu",
+                "category": "ornamen",
+                "file": asset_path,
+                "tags": ["sekar"],
+                "metadata": {},
+            }
+        ],
+    }
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("manifest.json", json.dumps(manifest))
+        archive.writestr(asset_path, asset_content)
+    return buffer.getvalue()
+
+
 def build_studio_package(
     preview: bytes,
     *,
@@ -39,10 +75,13 @@ def build_studio_package(
     tamper_manifest: bool = False,
     drop_preview: bool = False,
     wrong_checksum: bool = False,
+    asset_pack: bytes | None = None,
 ) -> bytes:
     """Susun paket .batikcraftnft bersegel seperti keluaran BatikCraft Studio."""
     project_json = json.dumps({"project": "demo"}).encode("utf-8")
     payload = {"preview.jpg": preview, "project/project.json": project_json}
+    if asset_pack is not None:
+        payload["project/library/pustaka-sekar.batikpack"] = asset_pack
     if drop_preview:
         payload.pop("preview.jpg")
 
@@ -51,11 +90,24 @@ def build_studio_package(
         checksum = _sha256(content)
         if wrong_checksum and path == "preview.jpg":
             checksum = "0" * 64
-        files.append({"path": path, "size": len(content), "sha256": checksum})
+        files.append(
+            {
+                "path": path,
+                "role": (
+                    "preview"
+                    if path == "preview.jpg"
+                    else "project-manifest"
+                    if path == "project/project.json"
+                    else "project-asset"
+                ),
+                "size": len(content),
+                "sha256": checksum,
+            }
+        )
 
     manifest = {
         "format": "batikcraft-nft",
-        "schema_version": 1,
+        "schema_version": "1.0",
         "package_id": "pkg-demo",
         "identity": {
             "project_id": "proj-demo",
@@ -68,7 +120,7 @@ def build_studio_package(
     manifest_bytes = json.dumps(manifest, indent=2).encode("utf-8")
     seal = {
         "format": "batikcraft-nft-seal",
-        "schema_version": 1,
+        "schema_version": "1.0",
         "package_id": "pkg-demo",
         "manifest_sha256": _sha256(manifest_bytes),
     }
@@ -94,6 +146,34 @@ class StudioPackageVerificationTests(TestCase):
         self.assertEqual(verified.preview_sha256, _sha256(preview))
         self.assertEqual(verified.project_id, "proj-demo")
         self.assertEqual(verified.title, "Sekar Jagad")
+
+    def test_sealed_envelope_exposes_and_returns_installable_asset_pack(self):
+        preview = jpeg_preview()
+        asset_pack = build_asset_pack()
+        package = io.BytesIO(build_studio_package(preview, asset_pack=asset_pack))
+
+        verified = verify_studio_package(package)
+        extracted = read_embedded_asset_pack(package, verified)
+
+        self.assertEqual(
+            verified.asset_pack_path,
+            "project/library/pustaka-sekar.batikpack",
+        )
+        self.assertEqual(verified.asset_pack_filename, "pustaka-sekar.batikpack")
+        self.assertEqual(verified.asset_pack_sha256, _sha256(asset_pack))
+        self.assertEqual(verified.asset_pack_id, "pustaka-sekar")
+        self.assertEqual(extracted, asset_pack)
+
+    def test_malformed_embedded_asset_pack_is_rejected(self):
+        package = build_studio_package(
+            jpeg_preview(),
+            asset_pack=build_asset_pack(malformed=True),
+        )
+
+        with self.assertRaises(StudioPackageError) as ctx:
+            verify_studio_package(io.BytesIO(package))
+
+        self.assertIn("Format asset pack", str(ctx.exception))
 
     def test_manifest_edited_after_sealing_is_rejected(self):
         package = build_studio_package(jpeg_preview(), tamper_manifest=True)
@@ -171,6 +251,20 @@ class StudioOriginAPITests(APITestCase):
         self.assertEqual(origin["project_id"], "proj-demo")
         # Segel paket hanya checksum, bukan tanda tangan.
         self.assertFalse(origin["signature_verified"])
+
+    def test_asset_library_without_embedded_pack_is_rejected(self):
+        response = self.client.post(
+            reverse("api-nft-list"),
+            self._payload(
+                build_studio_package(self.preview),
+                self.preview,
+                metadata=json.dumps({"source_type": "asset_library"}),
+            ),
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, 400, response.data)
+        self.assertIn("package_file", response.data)
 
     def test_image_without_package_is_rejected(self):
         response = self.client.post(
