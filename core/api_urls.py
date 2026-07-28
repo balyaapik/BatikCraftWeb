@@ -6,13 +6,13 @@ from .api_views import (
     MeView,
     ModelAssetViewSet,
     ModelLibraryView,
-    NFTAssetViewSet,
     StudioCapabilitiesView,
     StudioLogoutView,
 )
+from .creator_api_views import CreatorReadyNFTAssetViewSet
 
 router = DefaultRouter()
-router.register("nfts", NFTAssetViewSet, basename="api-nft")
+router.register("nfts", CreatorReadyNFTAssetViewSet, basename="api-nft")
 router.register("models", ModelAssetViewSet, basename="api-model")
 
 urlpatterns = [

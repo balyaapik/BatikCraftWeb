@@ -2,6 +2,7 @@ from pathlib import Path
 
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.utils import timezone
 
 from .captcha import issue_captcha, verify_captcha
 from .models import (
@@ -46,7 +47,7 @@ class _CaptchaValidationMixin:
         value = self.cleaned_data.get("captcha", "")
         if self.request is None or not verify_captcha(self.request, value):
             if self.request is not None:
-                issue_captcha(self.request, force=True)
+                issue_captcha(request=self.request, force=True)
             raise forms.ValidationError(
                 "Kode CAPTCHA salah atau sudah kedaluwarsa. Masukkan kode yang baru."
             )
@@ -110,7 +111,21 @@ class ProfileForm(forms.ModelForm):
             "wallet_address",
             "avatar",
             "timezone_name",
+            "payout_bank_code",
+            "payout_account_number",
+            "payout_account_holder",
         )
+        labels = {
+            "payout_bank_code": "Kode bank payout",
+            "payout_account_number": "Nomor rekening payout",
+            "payout_account_holder": "Nama pemilik rekening",
+        }
+        help_texts = {
+            "payout_bank_code": (
+                "Kode channel payout Xendit, misalnya BCA atau ID_BCA. "
+                "Ketiga data rekening harus diisi lengkap."
+            ),
+        }
         widgets = {"bio": forms.Textarea(attrs={"rows": 4})}
 
     def __init__(self, *args, **kwargs):
@@ -120,15 +135,31 @@ class ProfileForm(forms.ModelForm):
             ("", f"Ikuti default marketplace ({default})"),
             *((name, name) for name in available_timezones_sorted()),
         ]
+        if getattr(self.instance, "role", None) != User.Role.CREATOR:
+            for name in (
+                "payout_bank_code",
+                "payout_account_number",
+                "payout_account_holder",
+            ):
+                self.fields.pop(name, None)
+
+    def clean(self):
+        cleaned = super().clean()
+        payout_fields = (
+            "payout_bank_code",
+            "payout_account_number",
+            "payout_account_holder",
+        )
+        present = [str(cleaned.get(name) or "").strip() for name in payout_fields]
+        if any(present) and not all(present):
+            raise forms.ValidationError(
+                "Kode bank, nomor rekening, dan nama pemilik rekening harus diisi lengkap."
+            )
+        return cleaned
 
 
 class NFTForm(forms.ModelForm):
-    """Form web untuk menyunting metadata NFT.
-
-    Gambar sengaja tidak ada di sini: karya hanya boleh masuk melalui paket
-    .batikcraftnft yang diunggah BatikCraft Studio lewat API, sehingga gambar
-    yang beredar di market selalu berasal dari proyek Studio yang utuh.
-    """
+    """Form web untuk menyunting metadata NFT dari paket BatikCraft Studio."""
 
     class Meta:
         model = NFTAsset
@@ -151,6 +182,53 @@ class NFTForm(forms.ModelForm):
             ),
             "metadata": forms.Textarea(attrs={"rows": 5}),
         }
+
+    def clean(self):
+        cleaned = super().clean()
+        starts = cleaned.get("auction_starts_at") or timezone.now()
+        ends = cleaned.get("auction_ends_at")
+        starting_price = cleaned.get("starting_price")
+        reserve_price = cleaned.get("reserve_price")
+        if ends is None:
+            self.add_error(
+                "auction_ends_at",
+                "Batas akhir lelang wajib diisi agar pemenang dapat ditagih.",
+            )
+        elif ends <= starts:
+            self.add_error(
+                "auction_ends_at",
+                "Waktu selesai harus setelah waktu mulai lelang.",
+            )
+        if (
+            reserve_price is not None
+            and starting_price is not None
+            and reserve_price < starting_price
+        ):
+            self.add_error(
+                "reserve_price",
+                "Reserve price tidak boleh lebih rendah dari harga awal.",
+            )
+        return cleaned
+
+
+class AuctionRelistForm(forms.Form):
+    auction_ends_at = forms.DateTimeField(
+        label="Batas akhir lelang baru",
+        widget=forms.DateTimeInput(attrs={"type": "datetime-local"}),
+    )
+    reserve_price = forms.DecimalField(
+        label="Reserve price",
+        required=False,
+        min_value=0,
+        max_digits=18,
+        decimal_places=2,
+    )
+
+    def clean_auction_ends_at(self):
+        value = self.cleaned_data["auction_ends_at"]
+        if value <= timezone.now():
+            raise forms.ValidationError("Batas akhir baru harus berada di masa depan.")
+        return value
 
 
 class BidForm(forms.ModelForm):
