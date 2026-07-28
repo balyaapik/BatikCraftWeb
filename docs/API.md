@@ -1,66 +1,76 @@
 # BatikCraft Studio REST API
 
-Base URL lokal: `http://127.0.0.1:8000/api/v1/`
+Base URL: `/api/v1/` — locally `http://127.0.0.1:8000/api/v1/`.
 
-Semua endpoint list memakai pagination DRF (`results`, `next`, `previous`).
-BatikCraft Studio 0.2.0 mengikuti seluruh halaman hingga `next` bernilai `null`.
+All list endpoints use DRF pagination (`results`, `next`, `previous`). A client must
+follow pages until `next` is `null`.
 
-## 1. Kemampuan server
+---
+
+## 1. Server Capabilities
 
 ```http
 GET /api/v1/capabilities/
 ```
 
-Endpoint ini tidak memerlukan login dan mengembalikan versi kontrak, versi Studio
-minimum, ukuran halaman, batas paket sumber, serta feature flags untuk NFT, bidding,
-model, library, upload paket, dan download paket.
+No authentication required. Returns the contract version, the minimum Studio version,
+the page size, source package limits, the current `billing` rates, and feature flags for
+NFTs, bidding, models, the library, package upload, and package download.
 
-## 2. Mendapatkan token
+Read this before assuming a feature exists.
+
+---
+
+## 2. Obtaining a Token
 
 ```http
 POST /api/v1/auth/token/
 Content-Type: application/json
 
-{"username":"creator_demo","password":"BatikCraft123!"}
+{"username": "creator_demo", "password": "BatikCraft123!"}
 ```
-
-Respons:
 
 ```json
-{"token":"<TOKEN>"}
+{"token": "<TOKEN>"}
 ```
 
-Semua request Studio berikutnya memakai header:
+Every subsequent request carries:
 
 ```http
 Authorization: Token <TOKEN>
 ```
 
-Logout dan pencabutan token:
+Revoke the token:
 
 ```http
 POST /api/v1/auth/logout/
 Authorization: Token <TOKEN>
 ```
 
-## 3. Membaca atau memperbarui profil akun
+---
+
+## 3. Account Profile
 
 ```http
-GET /api/v1/me/
+GET   /api/v1/me/
 PATCH /api/v1/me/
 Authorization: Token <TOKEN>
 ```
 
-## 4. Upload NFT atau pustaka aset dari Studio
+---
 
-Endpoint menerima JSON dengan `image_url`, atau `multipart/form-data` dengan file
-`image`. Paket sumber opsional dikirim sebagai `package_file`:
+## 4. Uploading an NFT or Asset Library
 
-- motif NFT: `.batikcraftnft`;
-- pustaka aset: `.batikpack`.
+Accepts JSON with an `image_url`, or `multipart/form-data` with an `image` file. An
+optional source package is sent as `package_file`:
 
-Pustaka aset dengan `metadata.source_type = "asset_library"` wajib menyertakan
-`package_file` sebelum dapat dipublikasikan.
+| Kind | Package extension |
+| --- | --- |
+| NFT motif | `.batikcraftnft` |
+| Asset library | `.batikpack` |
+
+An asset library with `metadata.source_type = "asset_library"` **must** include a
+`package_file` before it can be published.
 
 ```http
 POST /api/v1/nfts/
@@ -68,22 +78,22 @@ Authorization: Token <TOKEN>
 Content-Type: multipart/form-data
 ```
 
-Field utama:
+Principal fields:
 
 ```text
 title
- description
- image atau image_url
- package_file (.batikcraftnft / .batikpack, opsional untuk motif)
- source_project_id
- source_app_version
- starting_price
- reserve_price
- auction_ends_at
- metadata
+description
+image or image_url
+package_file        (.batikcraftnft / .batikpack; optional for a motif)
+source_project_id
+source_app_version
+starting_price
+reserve_price
+auction_ends_at
+metadata
 ```
 
-Contoh metadata motif:
+Motif metadata:
 
 ```json
 {
@@ -93,7 +103,7 @@ Contoh metadata motif:
 }
 ```
 
-Contoh metadata pustaka:
+Library metadata:
 
 ```json
 {
@@ -106,12 +116,13 @@ Contoh metadata pustaka:
 }
 ```
 
-`source_project_id` opsional. Jika diisi, nilainya unik per creator. Percobaan
-upload kedua dijawab `400` pada field `source_project_id`.
+`source_project_id` is optional. When supplied it is unique per creator; a second upload
+with the same value is answered `400` on that field.
 
-### Field JSON melalui multipart
+### JSON Fields over Multipart
 
-Pada `multipart/form-data`, field JSON diterima sebagai string JSON:
+In `multipart/form-data`, JSON fields are accepted as JSON strings, and simple lists also
+accept a comma-separated form:
 
 ```text
 metadata      = {"canvas": {"width": 1920}}
@@ -119,22 +130,24 @@ trigger_words = ["bcr_kawung", "bcr_parang"]
 trigger_words = bcr_kawung, bcr_parang
 ```
 
-## 5. Publish NFT
+---
+
+## 5. Publishing an NFT
 
 ```http
 POST /api/v1/nfts/{id}/publish/
 Authorization: Token <TOKEN>
 ```
 
-NFT wajib memiliki gambar dan `starting_price > 0`. Pustaka aset juga wajib memiliki
-file `.batikpack` yang berhasil disimpan server.
+Requirements: an image, `starting_price > 0`, and — for an asset library — a
+successfully stored `.batikpack`.
 
-Selain itu **fee bidding harus lunas** sebelum listing tayang. Bila belum,
-endpoint membalas `402 Payment Required` beserta rincian tagihan:
+The **listing fee must be paid** before the listing goes live. If it is not, the
+endpoint answers `402 Payment Required` with the full breakdown:
 
 ```json
 {
-  "detail": "Fee bidding harus dilunasi sebelum NFT tayang di market.",
+  "detail": "The listing fee must be settled before the NFT appears on the market.",
   "listing_fee": {
     "status": "pending",
     "invoice_number": "BCFEE-20260727-A1B2C3D4E5",
@@ -153,10 +166,12 @@ endpoint membalas `402 Payment Required` beserta rincian tagihan:
 }
 ```
 
-Studio membuka `checkout_url` di browser agar creator membayar melalui payment
-gateway, lalu mengulang `publish` setelah status berubah menjadi `paid`.
+The Studio opens `checkout_url` in a browser so the creator can pay, then retries
+`publish` once the status becomes `paid`.
 
-## 5b. Fee bidding creator
+---
+
+## 5b. The Creator Listing Fee
 
 ```http
 GET  /api/v1/nfts/{id}/listing-fee/
@@ -164,70 +179,68 @@ POST /api/v1/nfts/{id}/listing-fee/
 Authorization: Token <TOKEN>
 ```
 
-`GET` mengembalikan estimasi bila tagihan belum diterbitkan (`status`:
-`not_issued`), sehingga Studio dapat menampilkan biaya sebelum creator memutuskan
-untuk publish. `POST` menerbitkan tagihan resmi.
+`GET` returns an estimate while no invoice has been raised (`status: "not_issued"`), so
+the Studio can show the cost before the creator commits to publishing. `POST` raises the
+formal invoice.
 
-Aturan yang berlaku:
+The rules:
 
-- Fee dihitung dari **persentase harga terendah** (`starting_price`) yang
-  dicantumkan creator, dengan batas fee minimum.
-- **PPN 11%** ditambahkan di atas fee tersebut.
-- Fee **tidak dikembalikan**: terjual atau tidak terjual, creator tetap membayar
-  fee beserta PPN-nya.
-- Tarif yang berlaku dapat dibaca dari blok `billing` pada endpoint kemampuan
-  server.
+- The fee is a **percentage of the starting price**, subject to a minimum.
+- **VAT** is added on top of that fee.
+- **The fee is non-refundable.** Sold or unsold, the creator pays the fee and its VAT.
+- Current rates are readable from the `billing` block of the capabilities endpoint.
 
-## 5c. PPN pada invoice buyer
+---
 
-Invoice pemenang lelang memuat tiga nilai:
+## 5c. VAT on the Buyer Invoice
 
-| Field | Arti |
+| Field | Meaning |
 | --- | --- |
-| `subtotal_amount` | Nilai bid pemenang |
-| `vat_amount` | PPN 11% dari subtotal |
-| `amount` | Total yang harus dibayar buyer |
+| `subtotal_amount` | The winning bid |
+| `vat_amount` | VAT on the subtotal |
+| `amount` | Total payable by the buyer |
 
-Setelah buyer melunasi invoice melalui payment gateway, NFT diterbitkan ke akun
-buyer dan payout senilai `subtotal_amount` dicatat untuk creator. PPN bukan hak
-creator sehingga tidak ikut dibayarkan pada payout.
+Once the buyer settles the invoice, the NFT is issued to their account and a payout equal
+to `subtotal_amount` is recorded for the creator. VAT is not the creator's and is
+excluded from the payout.
 
-## 6. Daftar NFT dan bidding
+---
+
+## 6. Listing NFTs and Bidding
 
 ```http
-GET /api/v1/nfts/
-GET /api/v1/nfts/{id}/bids/
+GET  /api/v1/nfts/
+GET  /api/v1/nfts/{id}/bids/
 POST /api/v1/nfts/{id}/bids/
 Authorization: Token <TOKEN>
 ```
 
-Payload bid:
-
 ```json
-{"amount":"1500000.00"}
+{"amount": "1500000.00"}
 ```
 
-Bid ditolak jika auction tertutup, bidder bukan akun buyer, bidder adalah pemilik,
-atau nominal tidak melebihi harga berjalan.
+A bid is rejected when the auction is closed, the bidder is not a buyer account, the
+bidder owns the NFT, or the amount does not exceed the running price.
 
-## 7. Unduh paket sumber NFT atau pustaka
+---
+
+## 7. Downloading a Source Package
 
 ```http
 GET /api/v1/nfts/{id}/package/
 Authorization: Token <TOKEN>
 ```
 
-Akses hanya diberikan kepada:
+Access is granted only to the owner, a superuser, or the highest bidder once the auction
+has ended or the status is `sold`.
 
-- pemilik NFT/pustaka;
-- superuser;
-- bidder tertinggi setelah waktu auction berakhir atau status menjadi `sold`.
+The file is streamed through Django as an attachment. The response carries
+`X-BatikCraft-NFT-ID` and `X-BatikCraft-Package-SHA256`. Internal storage URLs are never
+exposed.
 
-File dialirkan melalui Django sebagai attachment. Respons membawa header
-`X-BatikCraft-NFT-ID` dan `X-BatikCraft-Package-SHA256`. URL storage internal tidak
-pernah diekspos.
+---
 
-## 8. Marketplace model
+## 8. Model Marketplace
 
 ```http
 GET  /api/v1/models/
@@ -238,22 +251,31 @@ GET  /api/v1/models/{id}/download/
 Authorization: Token <TOKEN>
 ```
 
-Upload model menggunakan multipart dengan field `model_file=.batikmodel`, preview,
-metadata, harga, lisensi, trigger words, dan capabilities.
+Model upload uses multipart with `model_file=.batikmodel`, plus preview, metadata,
+price, licence, trigger words, and capabilities.
 
-## 9. Library model akun
+---
+
+## 9. Account Model Library
 
 ```http
 GET /api/v1/library/models/
 Authorization: Token <TOKEN>
 ```
 
-Respons berisi pembelian berstatus `paid`, metadata model, jumlah download, dan URL
-unduh yang tetap memerlukan token.
+Returns purchases with status `paid`, the model metadata, the download count, and a
+download URL that still requires the token.
 
-## 10. Batas upload dan penyimpanan
+---
 
-Batas default paket sumber adalah 512 MB dan dapat diubah melalui setting Django
-`BATIKCRAFT_MAX_PACKAGE_UPLOAD_SIZE`. File disimpan menggunakan backend storage
-Django aktif, sehingga konfigurasi lokal, S3, atau Cloudflare R2 memakai kontrak API
-yang sama.
+## 10. Upload and Storage Limits
+
+The default source package limit is 512 MB, adjustable through the Django setting
+`BATIKCRAFT_MAX_PACKAGE_UPLOAD_SIZE`. Files are written through the active Django
+storage backend, so local, S3, and Cloudflare R2 configurations share one API contract.
+
+---
+
+## Client Example
+
+A working Python client is in [`studio_client_example.py`](studio_client_example.py).
