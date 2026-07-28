@@ -28,7 +28,16 @@ jobs:
         with:
           name: django-test-log-${{ github.run_id }}
           path: django-test.log
-      - run: ruff check .
+      - name: Run Ruff
+        run: |
+          set -o pipefail
+          ruff check . 2>&1 | tee ruff.log
+      - name: Upload Ruff log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruff-log-${{ github.run_id }}
+          path: ruff.log
 
   mysql:
     runs-on: ubuntu-latest
