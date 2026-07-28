@@ -1,6 +1,6 @@
 # BatikCraftWeb
 
-<img width="512" height="512" alt="ChatGPT Image Jul 28, 2026, 11_00_23 AM" src="https://github.com/user-attachments/assets/4e34c038-8677-40b2-a4fc-c13ef962bf1f" />
+<img width="512" height="512" alt="WhatsApp Image 2026-07-26 at 9 00 57 PM" src="https://github.com/user-attachments/assets/2a3e6bd2-7100-4142-a057-64d966e0fda0" />
 
 The Django web platform for the BatikCraft ecosystem: landing pages, blog, creator and
 buyer dashboards, an NFT marketplace with live auctions, a model and asset library
