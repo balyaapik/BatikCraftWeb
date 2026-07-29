@@ -43,7 +43,6 @@ from .models import (
     NFTAsset,
     User,
     quantize_idr,
-    quantize_money,
 )
 
 

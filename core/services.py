@@ -16,7 +16,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from .models import AuctionSettlement, NFTAsset, quantize_idr, quantize_money
+from .models import AuctionSettlement, NFTAsset, quantize_idr
 
 logger = logging.getLogger(__name__)
 

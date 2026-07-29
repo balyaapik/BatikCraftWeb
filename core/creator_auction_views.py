@@ -30,7 +30,7 @@ from .forms import (
     NFTForm,
     PaymentSubmissionForm,
 )
-from .models import AuctionSettlement, Bid, NFTAsset, User, quantize_idr, quantize_money
+from .models import AuctionSettlement, Bid, NFTAsset, User, quantize_idr
 
 _EXCLUDED_BIDDERS_KEY = "_auction_excluded_bidder_ids"
 _TERMINAL_SETTLEMENT_STATUSES = {
