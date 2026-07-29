@@ -9,6 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 MONEY_QUANTUM = Decimal("0.01")
+IDR_QUANTUM = Decimal("1")
 
 
 def available_timezones_sorted():
@@ -29,6 +30,15 @@ def is_valid_timezone(name: str) -> bool:
 def quantize_money(value: Decimal) -> Decimal:
     """Bulatkan nilai uang ke dua desimal dengan pembulatan setengah ke atas."""
     return Decimal(value).quantize(MONEY_QUANTUM, rounding=ROUND_HALF_UP)
+
+
+def quantize_idr(value: Decimal) -> Decimal:
+    """Bulatkan nilai IDR ke bilangan bulat terdekat (HALF_UP).
+
+    Xendit QRIS hanya menerima nominal IDR tanpa pecahan. Gunakan fungsi ini
+    untuk setiap nilai akhir yang akan dikirim ke gateway pembayaran.
+    """
+    return Decimal(value).quantize(IDR_QUANTUM, rounding=ROUND_HALF_UP)
 
 
 class User(AbstractUser):
@@ -406,7 +416,7 @@ class AuctionSettlement(models.Model):
         if not self.subtotal_amount and self.winning_bid_id:
             self.subtotal_amount = self.winning_bid.amount
         if self.subtotal_amount:
-            expected_vat = quantize_money(
+            expected_vat = quantize_idr(
                 self.subtotal_amount * (self.vat_percent / Decimal(100))
             )
             if self.vat_amount != expected_vat:
