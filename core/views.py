@@ -42,7 +42,7 @@ from .models import (
     ModelPurchase,
     NFTAsset,
     User,
-    quantize_money,
+    quantize_idr,
 )
 
 
@@ -349,7 +349,7 @@ def create_auction_invoice(request, pk):
             return redirect("nft_detail", pk=pk)
 
         vat_percent = current_vat_percent()
-        vat_amount = quantize_money(
+        vat_amount = quantize_idr(
             winning_bid.amount * (vat_percent / Decimal(100))
         )
         settlement = AuctionSettlement.objects.create(

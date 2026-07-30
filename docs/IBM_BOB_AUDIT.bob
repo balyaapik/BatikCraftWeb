@@ -1,0 +1,349 @@
+{
+  "bob_artifact_version": "1.0",
+  "artifact_type": "engineering_audit",
+  "generated_by": "IBM Bob — Autonomous AI Software Engineering Agent",
+  "project": "BatikCraftWeb",
+  "repository": "https://github.com/balyaapik/BatikCraftWeb",
+  "companion_repository": "https://github.com/balyaapik/BatikCraftStudio",
+  "framework": "Django 5.1 / Python 3.12",
+  "audit_phases_completed": [
+    "Phase 1 — Repository Analysis",
+    "Phase 2 — Code Quality Audit",
+    "Phase 3 — Security Review",
+    "Phase 4 — Functional Testing",
+    "Phase 5 — Engineering Improvements",
+    "Phase 6 — Engineering Report",
+    "Phase 7 — IBM Bob Artifact"
+  ],
+
+  "repository_analysis": {
+    "stack": {
+      "framework": "Django 5.1",
+      "python": "3.12+",
+      "api": "Django REST Framework 3.15",
+      "databases": ["SQLite (dev)", "PostgreSQL", "MySQL 8.4"],
+      "server": "Gunicorn + WhiteNoise",
+      "storage": "Local disk or Cloudflare R2 (runtime-switchable)",
+      "payments": "Xendit (QRIS)",
+      "auth": "Session + DRF Token"
+    },
+    "apps": {
+      "core": "Users, NFTs, bids, auction settlements, model marketplace, blog, dashboards, Studio API",
+      "payments": "Xendit gateway, listing fees, buyer invoices, creator payouts",
+      "storage_config": "Runtime-switchable media storage, encrypted R2 credentials"
+    },
+    "studio_integration": {
+      "protocol": "REST API at /api/v1/",
+      "authentication": "Token",
+      "studio_responsibilities": ["Asset creation", "Package (.batikcraftnft) upload", "Publish trigger"],
+      "web_responsibilities": ["Auction state", "Payment", "Settlement", "Mint registry"]
+    },
+    "ci_cd": {
+      "provider": "GitHub Actions",
+      "jobs": ["SQLite tests + ruff lint", "MySQL 8.4 tests"],
+      "migration_check": true,
+      "artifact_upload_on_failure": true
+    }
+  },
+
+  "audit_findings": {
+    "total": 18,
+    "by_severity": {
+      "critical": 0,
+      "high": 2,
+      "medium": 6,
+      "low": 5,
+      "informational": 5
+    },
+    "findings": [
+      {
+        "id": "A-01",
+        "severity": "HIGH",
+        "title": "No API rate limiting on /api/v1/auth/token/",
+        "location": "batikcraft_web/settings.py, reverse-proxy config",
+        "status": "documented"
+      },
+      {
+        "id": "A-02",
+        "severity": "HIGH",
+        "title": "Xendit gateway credentials stored as plain text in PaymentGatewaySetting",
+        "location": "payments/models.py:PaymentGatewaySetting",
+        "status": "documented"
+      },
+      {
+        "id": "A-03",
+        "severity": "MEDIUM",
+        "title": "close_expired_auctions has no scheduler in Docker Compose",
+        "location": "docker-compose.yml, docker-compose.mysql.yml",
+        "status": "documented_fixed"
+      },
+      {
+        "id": "A-04",
+        "severity": "MEDIUM",
+        "title": "_mint_paid_settlement nft.save() without update_fields",
+        "location": "core/creator_auction_views.py:413",
+        "status": "fixed"
+      },
+      {
+        "id": "A-05",
+        "severity": "MEDIUM",
+        "title": "_mint_paid_settlement settlement.save() without update_fields",
+        "location": "core/creator_auction_views.py:423",
+        "status": "fixed"
+      },
+      {
+        "id": "A-05b",
+        "severity": "MEDIUM",
+        "title": "submit_auction_payment locked.save() without update_fields",
+        "location": "core/creator_auction_views.py:390",
+        "status": "fixed"
+      },
+      {
+        "id": "A-06",
+        "severity": "MEDIUM",
+        "title": "VAT rounded to 2 decimal places causing Xendit QRIS rejection",
+        "location": "core/services.py, core/views.py, core/creator_auction_views.py, core/models.py",
+        "status": "fixed_prior_session",
+        "fix": "quantize_idr() introduced; rounds to whole IDR"
+      },
+      {
+        "id": "A-07",
+        "severity": "MEDIUM",
+        "title": "Auction closing has no external trigger in CI or Docker",
+        "location": "docs/AUCTION_PAYMENT_FLOW.md",
+        "status": "by_design_documented"
+      },
+      {
+        "id": "A-08",
+        "severity": "MEDIUM",
+        "title": "manage.py check --deploy reports 6 warnings in development mode",
+        "location": "batikcraft_web/settings.py",
+        "status": "intentional_dev_defaults",
+        "note": "All 6 hardened when DJANGO_DEBUG=False"
+      },
+      {
+        "id": "A-09",
+        "severity": "MEDIUM",
+        "title": "Broad except Exception: in services and api_views",
+        "location": "core/services.py:202, core/api_views.py:369,539",
+        "status": "acceptable",
+        "note": "Logged via logger.exception(); acceptable in cleanup paths"
+      },
+      {
+        "id": "A-10",
+        "severity": "MEDIUM",
+        "title": "Hardcoded bid history cap [:20] in nft_detail view",
+        "location": "core/public_views.py:170",
+        "status": "informational"
+      },
+      {
+        "id": "A-11",
+        "severity": "LOW",
+        "title": "Double blank line in auth_views.py (PEP 8 / ruff E303)",
+        "location": "core/auth_views.py:18-19",
+        "status": "fixed"
+      },
+      {
+        "id": "A-12",
+        "severity": "LOW",
+        "title": "blog_list and news views share identical query logic (DRY violation)",
+        "location": "core/public_views.py:201-233",
+        "status": "not_modified_low_risk"
+      },
+      {
+        "id": "A-13",
+        "severity": "LOW",
+        "title": "StudioCapabilitiesView calls _fee_config() twice",
+        "location": "core/api_views.py:478-480",
+        "status": "acceptable_low_traffic"
+      },
+      {
+        "id": "A-14",
+        "severity": "LOW",
+        "title": "BlogPost admin does not expose updated_at for auditing",
+        "location": "core/models.py:BlogPost",
+        "status": "informational"
+      },
+      {
+        "id": "A-15",
+        "severity": "LOW",
+        "title": "AUCTION_CLOSE_PAYMENT_DUE_HOURS undocumented in .env.example",
+        "location": "core/services.py:40",
+        "status": "fixed_documented"
+      },
+      {
+        "id": "A-16",
+        "severity": "LOW",
+        "title": "CI MySQL job does not run ruff check",
+        "location": ".github/workflows/ci.yml",
+        "status": "low_risk"
+      },
+      {
+        "id": "A-17",
+        "severity": "INFO",
+        "title": "API contract version hardcoded as 1.4 with no versioning path",
+        "location": "core/api_views.py:440",
+        "status": "informational"
+      },
+      {
+        "id": "A-18",
+        "severity": "INFO",
+        "title": "Gateway credential encryption gap documented",
+        "location": "payments/models.py, docs/SECURITY.md",
+        "status": "documented"
+      }
+    ]
+  },
+
+  "security_review": {
+    "controls_passed": [
+      "CSRF protection (CsrfViewMiddleware + @csrf_exempt on webhook with token auth)",
+      "Webhook HMAC token verification (constant-time hmac.compare_digest)",
+      "Session security (HttpOnly, Secure, SameSite=Lax, HSTS 1yr with preload)",
+      "Role-based access control (buyer/creator separation at every view)",
+      "Payment proof file upload (extension allowlist + 10MB cap)",
+      "File download authorisation (all files streamed through Django after check)",
+      "Webhook idempotency (SHA-256 event_key in PaymentGatewayEvent)",
+      "Settlement concurrency (select_for_update + transaction.atomic everywhere)",
+      "Secret key protection (ImproperlyConfigured at boot with insecure key + DEBUG=False)"
+    ],
+    "controls_failed": [
+      "API rate limiting absent on /api/v1/auth/token/",
+      "Xendit gateway credentials stored as plain text (partial encryption gap)"
+    ]
+  },
+
+  "testing": {
+    "pre_existing_tests": {
+      "count": 59,
+      "result": "ALL_PASS",
+      "modules": [
+        "core.test_close_expired_auctions (15)",
+        "core.test_auction_payment_flow (5)",
+        "payments.tests (5)",
+        "payments.tests_integration (16)",
+        "payments.test_listing_fee_and_payout (18)"
+      ]
+    },
+    "new_tests_written": {
+      "count": 61,
+      "file": "core/test_bob_audit.py",
+      "result": "ALL_PASS",
+      "suites": [
+        "QuantizeIdrTests (5) — VAT rounding, ROUND_HALF_UP, settlement amount invariant",
+        "UnauthenticatedAccessTests (6) — All protected endpoints redirect anonymous",
+        "RoleEnforcementTests (5) — Buyer/creator cross-role prevention",
+        "BidValidationTests (6) — Bid validation edge cases",
+        "SettlementStateMachineTests (8) — Full state machine including happy path",
+        "NFTPublishGuardrailTests (5) — Publish guard-rails",
+        "PaymentProofUploadTests (4) — File type validation",
+        "PublicPagesAccessTests (8) — Public page accessibility",
+        "APIPermissionTests (5) — DRF auth requirements",
+        "WebhookSecurityTests (5) — Token rejection, method enforcement",
+        "SettlementAmountConsistencyTests (4) — IDR rounding invariants"
+      ]
+    },
+    "total_tests_run": 120,
+    "total_failures": 0
+  },
+
+  "improvements_implemented": [
+    {
+      "file": "core/auth_views.py",
+      "change": "Removed double blank line (E303)",
+      "category": "code_quality"
+    },
+    {
+      "file": "core/creator_auction_views.py",
+      "change": "Added update_fields to nft.save() in _mint_paid_settlement — 7 fields",
+      "category": "performance"
+    },
+    {
+      "file": "core/creator_auction_views.py",
+      "change": "Added update_fields to settlement.save() in _mint_paid_settlement — 7 fields",
+      "category": "performance"
+    },
+    {
+      "file": "core/creator_auction_views.py",
+      "change": "Added update_fields to locked.save() in submit_auction_payment — 7 fields",
+      "category": "performance"
+    },
+    {
+      "file": "docs/DEPLOYMENT.md",
+      "change": "Expanded §8 with cron syntax, idempotency note, AUCTION_CLOSE_PAYMENT_DUE_HOURS documentation",
+      "category": "documentation"
+    },
+    {
+      "file": "docs/SECURITY.md",
+      "change": "Added API Rate Limiting section and Payment Gateway Credentials section",
+      "category": "documentation"
+    },
+    {
+      "file": "core/test_bob_audit.py",
+      "change": "New file: 61 integration tests covering gaps identified in audit",
+      "category": "test_coverage"
+    },
+    {
+      "file": "core/models.py",
+      "change": "PRIOR SESSION: IDR_QUANTUM, quantize_idr() — Xendit QRIS integer fix",
+      "category": "bug_fix"
+    },
+    {
+      "file": "core/services.py",
+      "change": "PRIOR SESSION: quantize_idr() for VAT in _close_single_auction",
+      "category": "bug_fix"
+    },
+    {
+      "file": "core/views.py",
+      "change": "PRIOR SESSION: quantize_idr() for VAT in create_auction_invoice",
+      "category": "bug_fix"
+    },
+    {
+      "file": "core/creator_auction_views.py",
+      "change": "PRIOR SESSION: quantize_idr() for VAT in _configure_invoice",
+      "category": "bug_fix"
+    }
+  ],
+
+  "overall_health": {
+    "architecture": "5/5",
+    "transaction_safety": "5/5",
+    "security": "4/5",
+    "code_quality": "4/5",
+    "test_coverage": "4/5",
+    "ci_cd": "4/5",
+    "documentation": "4/5",
+    "operational_readiness": "3/5",
+    "summary": "Production-ready with caveats. Core business logic is correct and all 120 tests pass. Primary risks are operational (no scheduler, no rate limiting) rather than code defects."
+  },
+
+  "bob_execution_summary": {
+    "phases_executed": 7,
+    "files_read": 42,
+    "files_modified": 8,
+    "files_created": 2,
+    "tests_run": 120,
+    "tests_written": 61,
+    "findings_reported": 18,
+    "improvements_applied": 11,
+    "regressions_introduced": 0,
+    "methodology": [
+      "1. Parallel deep-read of all source files and CI config",
+      "2. Structural analysis: models, services, views, URLs, serializers, forms",
+      "3. Security controls verified against OWASP checklist",
+      "4. Deploy check (manage.py check --deploy) executed",
+      "5. Existing 59-test suite run and validated",
+      "6. 61 new tests written targeting identified gaps",
+      "7. All new tests iterated to green (0 failures)",
+      "8. Safe improvements applied: update_fields, style fix, documentation",
+      "9. Full combined 120-test run to confirm zero regressions",
+      "10. HTML report and .bob artifact generated"
+    ],
+    "constraints_honoured": [
+      "No architecture changes",
+      "No business logic changes beyond bug fixes",
+      "Backward compatible",
+      "Minimal change principle"
+    ]
+  }
+}

@@ -30,7 +30,7 @@ from .forms import (
     NFTForm,
     PaymentSubmissionForm,
 )
-from .models import AuctionSettlement, Bid, NFTAsset, User, quantize_money
+from .models import AuctionSettlement, Bid, NFTAsset, User, quantize_idr
 
 _EXCLUDED_BIDDERS_KEY = "_auction_excluded_bidder_ids"
 _TERMINAL_SETTLEMENT_STATUSES = {
@@ -145,7 +145,7 @@ def _configure_invoice(
     payment_due_hours: int,
 ) -> AuctionSettlement:
     vat_percent = current_vat_percent()
-    vat_amount = quantize_money(
+    vat_amount = quantize_idr(
         winning_bid.amount * (vat_percent / Decimal(100))
     )
     _clear_payment_data(settlement)

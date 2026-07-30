@@ -16,7 +16,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from .models import AuctionSettlement, NFTAsset, quantize_money
+from .models import AuctionSettlement, NFTAsset, quantize_idr
 
 logger = logging.getLogger(__name__)
 
@@ -114,7 +114,7 @@ def _close_single_auction(nft: NFTAsset) -> AuctionCloseResult:
             ),
         )
         vat_percent = current_vat_percent()
-        vat_amount = quantize_money(
+        vat_amount = quantize_idr(
             winning_bid.amount * (vat_percent / Decimal(100))
         )
         settlement = AuctionSettlement.objects.create(
